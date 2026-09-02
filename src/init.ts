@@ -1,4 +1,4 @@
-const defaultBasename = '/一致性趋势图';
+const defaultBasename = '/consistency-trend-chart';
 const encodedBasename = encodeURI(defaultBasename);
 const resolvedBasename = window.location.pathname.startsWith(encodedBasename)
   ? encodedBasename

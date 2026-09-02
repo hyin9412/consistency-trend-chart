@@ -2,6 +2,14 @@
 
 基于 ve-o 设计规范的快速启动包。内置 `ve_o_design_tod` Skill，在 Trae IDE 中打开即可通过 AI 生成标准页面。
 
+## 发布信息
+
+- GitHub Repo: `https://github.com/hyin9412/consistency-trend-chart`
+- GitHub Pages: `https://hyin9412.github.io/consistency-trend-chart/`
+- 本地构建：`pnpm build`
+- 当前发布方式：本地构建后手动推送 `main`，再将 `build/` 发布到 `gh-pages`
+- Pages 子路径：React Router `basename` 固定为 `/consistency-trend-chart`
+
 ## 使用方式
 
 1. 获取本项目（clone / 解压）
