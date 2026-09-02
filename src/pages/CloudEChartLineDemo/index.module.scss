@@ -1,0 +1,245 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.content {
+  padding: 20px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metricCard,
+.chartCard {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.chartCard {
+  :global(.arco-card-body),
+  :global(.arco-volc3-card-body) {
+    padding: 0;
+  }
+}
+
+.metricLabel {
+  color: var(--color-text-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.metricValue {
+  margin-top: 8px;
+  color: var(--color-text-1);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 36px;
+}
+
+.metricHint {
+  margin-top: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chartTitle {
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inlineSelect {
+  width: fit-content;
+
+  :global(.arco-select-view),
+  :global(.arco-volc3-select-view) {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  :global(.arco-select-view-value),
+  :global(.arco-volc3-select-view-value) {
+    flex: 0 0 auto;
+    overflow: visible;
+    white-space: nowrap;
+    text-overflow: clip;
+  }
+
+  :global(.arco-select-view-suffix),
+  :global(.arco-volc3-select-view-suffix) {
+    position: static;
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+
+  :global(.arco-select-view:hover),
+  :global(.arco-select-view:focus-within),
+  :global(.arco-volc3-select-view:hover),
+  :global(.arco-volc3-select-view:focus-within) {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+:global(.arco-select-dropdown .arco-select-option),
+:global(.arco-volc3-select-dropdown .arco-volc3-select-option) {
+  padding-right: 20px;
+}
+
+:global(.arco-select-dropdown .arco-select-option-content),
+:global(.arco-volc3-select-dropdown .arco-volc3-select-option-content) {
+  display: inline-block;
+  overflow: visible;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.fullscreenButton {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-2);
+
+  :global(.arco-btn-icon),
+  :global(.arco-volc3-btn-icon) {
+    font-size: 16px;
+  }
+}
+
+.chartStage {
+  position: relative;
+  min-height: 360px;
+  padding: 0;
+  background: #fff;
+
+  :global(.clegend-wrapper),
+  :global(.legend-page-control) {
+    display: none !important;
+  }
+}
+
+.chartStageFullscreen {
+  min-height: 560px;
+}
+
+.chart {
+  width: 100%;
+  min-height: 360px;
+}
+
+.legendLimitTooltip {
+  position: absolute;
+  z-index: 3;
+  max-width: 240px;
+  padding: 6px 10px;
+  color: var(--color-text-1);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  background: #fff;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(29, 33, 41, 0.12);
+  pointer-events: none;
+  transform: translateY(-100%);
+}
+
+.legendPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.legendItem:hover {
+  color: var(--color-text-1);
+}
+
+.legendItemSelected {
+  color: var(--color-text-1);
+}
+
+.legendMarker {
+  width: 10px;
+  height: 10px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.legendLabel {
+  white-space: nowrap;
+}
+
+.chartCardFullscreen {
+  height: 100%;
+  padding: 24px;
+}
+
+@media (max-width: 1200px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,159 @@
+.topNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 48px;
+  padding: 0;
+  background: #fff;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 100;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloudLogo {
+  flex-shrink: 0;
+}
+
+.separator {
+  width: 1px;
+  height: 16px;
+  background: #eaedf1;
+}
+
+.productName {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 26px;
+  color: #0c0d0e;
+  white-space: nowrap;
+}
+
+.stageSelect {
+  flex-shrink: 0;
+  width: 206px;
+  height: 28px;
+  margin-left: 4px;
+
+  :global(.arco-input-group) {
+    height: 28px;
+  }
+
+  :global(.arco-input-group-addbefore) {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+    line-height: 28px;
+  }
+
+  :global(.arco-select-view) {
+    min-height: 28px;
+    height: 28px;
+    font-size: 12px;
+    line-height: 28px;
+  }
+
+  :global(.arco-select-view-value) {
+    line-height: 28px;
+  }
+}
+
+.envBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #387bff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.searchInput {
+  width: 320px;
+  height: 32px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.menuItems {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menuItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 22px;
+  color: #020814;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-bg-3);
+  }
+}
+
+.arrow {
+  display: flex;
+  align-items: center;
+  color: #80838a;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 16px;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--color-bg-3);
+  }
+}

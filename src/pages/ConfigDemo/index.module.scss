@@ -1,0 +1,227 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fff;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.stepsWrapper {
+  display: flex;
+  justify-content: center;
+  padding: 24px 32px;
+}
+
+.steps {
+  width: 400px;
+}
+
+.content {
+  flex: 1;
+  padding: 0 32px;
+  overflow-y: auto;
+}
+
+.formArea {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  margin-top: 8px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  position: relative;
+  padding-left: 11px;
+  color: #020814;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formField {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.formLabel {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  align-items: center;
+  width: 120px;
+  color: var(--color-text-2);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.requiredStar {
+  color: rgb(var(--danger-6));
+  font-size: 12px;
+}
+
+.formControl {
+  flex: 1;
+  min-width: 0;
+}
+
+.labelTipIcon {
+  color: var(--color-text-3);
+  font-size: 14px;
+  cursor: help;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+.radioWithHint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.radioHintText {
+  color: rgb(var(--primary-6));
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.depList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.depRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.deleteBtn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--color-text-2);
+  font-size: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text-1);
+  }
+}
+
+.addBtn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 4px;
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 22px;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.addIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-weight: 400;
+  font-size: 14px;
+  background: rgba(162, 193, 255, 0.2);
+  border-radius: 50%;
+}
+
+.confirmSections {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  margin-top: 8px;
+}
+
+.confirmSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: #fff;
+}
+
+.footerDivider {
+  margin: 0;
+}
+
+.footerContent {
+  padding: 16px 32px;
+}
+
+.footerButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  max-width: 1260px;
+  margin: 0 auto;
+}

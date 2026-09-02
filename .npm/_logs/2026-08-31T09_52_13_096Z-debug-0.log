@@ -1,0 +1,33 @@
+0 verbose cli /opt/homebrew/Cellar/node/24.6.0/bin/node /opt/homebrew/bin/npm
+1 info using npm@11.12.1
+2 info using node@v24.6.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/bytedance/Downloads/tod-starter/.npmrc
+5 silly config load:file:/opt/homebrew/etc/npmrc
+6 verbose title npm whoami
+7 verbose argv "whoami" "--registry" "http://bnpm.byted.org"
+8 verbose logfile logs-max:10 dir:/Users/bytedance/Downloads/tod-starter/.npm/_logs/2026-08-31T09_52_13_096Z-
+9 verbose logfile /Users/bytedance/Downloads/tod-starter/.npm/_logs/2026-08-31T09_52_13_096Z-debug-0.log
+10 warn Unknown env config "enable-pre-post-scripts". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+11 warn Unknown env config "disturl". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+12 warn Unknown user config "disturl". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+13 warn Unknown user config "enable-pre-post-scripts". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+14 silly logfile start cleaning logs, removing 1 files
+15 verbose stack Error: This command requires you to be logged in.
+15 verbose stack     at module.exports (/opt/homebrew/lib/node_modules/npm/lib/utils/get-identity.js:22:5)
+15 verbose stack     at Whoami.exec (/opt/homebrew/lib/node_modules/npm/lib/commands/whoami.js:11:28)
+15 verbose stack     at /opt/homebrew/lib/node_modules/npm/lib/npm.js:308:81
+15 verbose stack     at Object.start (/opt/homebrew/lib/node_modules/npm/node_modules/proc-log/lib/index.js:101:21)
+15 verbose stack     at Npm.execCommandClass (/opt/homebrew/lib/node_modules/npm/lib/npm.js:307:19)
+15 verbose stack     at async Npm.exec (/opt/homebrew/lib/node_modules/npm/lib/npm.js:193:9)
+15 verbose stack     at async module.exports (/opt/homebrew/lib/node_modules/npm/lib/cli/entry.js:67:5)
+16 error code ENEEDAUTH
+17 error need auth This command requires you to be logged in.
+18 error need auth You need to authorize this machine using `npm adduser`
+19 verbose cwd /Users/bytedance/Downloads/tod-starter
+20 verbose os Darwin 23.6.0
+21 verbose node v24.6.0
+22 verbose npm  v11.12.1
+23 verbose exit 1
+24 verbose code 1
+25 error A complete log of this run can be found in: /Users/bytedance/Downloads/tod-starter/.npm/_logs/2026-08-31T09_52_13_096Z-debug-0.log

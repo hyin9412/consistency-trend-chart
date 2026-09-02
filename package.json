@@ -1,0 +1,40 @@
+{
+  "name": "tod-starter",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.14.4",
+  "description": "TOD Design Skill 快速启动包 — 预配物料库与页面框架，便于从零开始生成页面",
+  "scripts": {
+    "dev": "cloud-scripts dev",
+    "build": "cloud-scripts build"
+  },
+  "dependencies": {
+    "@arco-design/iconbox-react-ve-o-design": "^1.1.37",
+    "@arco-design/theme-ve-o-design": "^1.8.6",
+    "@arco-design/web-react": "^2.66.9",
+    "@cloud-materials/charts-common": "^0.10.0",
+    "@tod-m/materials": "^2.25.3",
+    "@visactor/react-vchart": "^2.1.6",
+    "@visactor/vchart": "^2.1.6",
+    "core-js": "^3.49.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@arco-plugins/webpack-react": "1.4.9",
+    "@cloudcli/scripts": "0.3.6",
+    "@types/react": "^17.0.83",
+    "@types/react-dom": "^17.0.26",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "sass": "^1.77.1",
+    "tailwindcss": "~3.4.14",
+    "typescript": "^5.7.3",
+    "webpack": "^5.91.0"
+  },
+  "browserslist": [
+    "defaults",
+    "Chrome > 74"
+  ]
+}

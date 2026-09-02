@@ -1,0 +1,121 @@
+.page {
+  background: #fff;
+}
+
+.globalTabs {
+  margin-top: 12px;
+}
+
+.tabContent {
+  padding: 20px 32px 24px;
+}
+
+.module {
+  & + & {
+    margin-top: 40px;
+  }
+}
+
+.moduleHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.moduleTitle {
+  position: relative;
+  padding-left: 11px;
+  color: var(--color-text-1);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.ruleToolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.subTabs {
+  margin-left: auto;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.filterLeft {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.filterRight {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.fixedFooter {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: #fff;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.batchBar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.conditionCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conditionType {
+  color: var(--color-text-1);
+  font-size: 14px;
+}
+
+.conditionDetail {
+  color: var(--color-text-3);
+  font-size: 12px;
+  white-space: pre-line;
+}
+
+.actionCell {
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.domainChanged {
+  color: rgb(var(--primary-6));
+}
+
+.placeholder {
+  padding: 60px 0;
+  color: var(--color-text-3);
+  font-size: 14px;
+  text-align: center;
+}

@@ -1,0 +1,438 @@
+.page {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 72px;
+  background: #fff;
+}
+
+.globalTabs {
+  margin-top: 12px;
+}
+
+.tabContent {
+  padding: 20px 32px 24px;
+}
+
+.filterBar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.filterFields {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.filterActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.keywordInput {
+  width: 285px;
+}
+
+.tagSearchInput {
+  width: 285px;
+}
+
+.moduleHeader {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.moduleTitle {
+  position: relative;
+  flex: 1;
+  padding-left: 11px;
+  color: var(--color-text-1);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.moduleActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.moduleActionsStandalone {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.apiName {
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionLinks {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dangerLink {
+  color: rgb(var(--danger-6));
+}
+
+.emptyState {
+  padding: 40px 0;
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.placeholder,
+.subText {
+  color: var(--color-text-3);
+}
+
+.batchBar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.checkboxTooltipWrap {
+  display: inline-flex;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.batchModal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.batchSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.batchActionSwitch {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.addSchemeSwitch {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.schemeSwitchLabel {
+  color: var(--color-text-2);
+  font-size: 13px;
+}
+
+.sectionTitle {
+  position: relative;
+  padding-left: 11px;
+  color: var(--color-text-1);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.stateGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-1);
+}
+
+.stateTitle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.stateMeta,
+.stateEmpty,
+.emptyBlock,
+.valueDesc {
+  color: var(--color-text-3);
+}
+
+.stateTagList,
+.pendingTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tagChip,
+.tagChipSelected,
+.partialTagChip,
+.pendingTagChip,
+.pendingRemoveChip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  line-height: 20px;
+  border: 0;
+  cursor: pointer;
+}
+
+.tagChip,
+.pendingTagChip {
+  border: 1px solid rgba(var(--primary-6), 0.18);
+  background: rgba(var(--primary-6), 0.08);
+  color: var(--color-text-1);
+}
+
+.partialTagChip {
+  border: 1px solid rgba(255, 125, 0, 0.2);
+  background: rgba(255, 125, 0, 0.08);
+}
+
+.tagChipSelected {
+  border: 1px solid rgba(var(--danger-6), 0.18);
+  background: rgba(var(--danger-6), 0.08);
+  color: rgb(var(--danger-6));
+}
+
+.pendingRemoveChip {
+  border: 1px solid rgba(var(--danger-6), 0.16);
+  background: rgba(var(--danger-6), 0.08);
+  color: rgb(var(--danger-6));
+}
+
+.tagChipLabel {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 0;
+}
+
+.tagChipClose {
+  padding: 0;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.selectorPanel {
+  display: flex;
+  gap: 16px;
+}
+
+.addHint {
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.schemeBTagList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schemeBTagItem {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schemeBTagLabel {
+  min-width: 88px;
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.schemeBTagSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.schemeBComposer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.schemeBAddRow {
+  display: flex;
+  margin-top: 16px;
+}
+
+.schemeBComposerField {
+  flex: 1;
+  min-width: 0;
+}
+
+.schemeBHint {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.schemeCSelect {
+  width: 100%;
+}
+
+.keyPanel {
+  flex: 0 0 240px;
+  padding: 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-1);
+}
+
+.valuePanel {
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-1);
+}
+
+.panelTitle,
+.pendingTitle {
+  margin-bottom: 12px;
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.panelSearch {
+  width: 285px;
+  margin-bottom: 12px;
+}
+
+.panelEmpty {
+  padding: 12px 0;
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.keyList,
+.valueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.keyItem,
+.keyItemActive {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--color-text-1);
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.keyItemActive {
+  border-color: rgb(var(--primary-6));
+  background: rgba(var(--primary-6), 0.08);
+}
+
+.keyValueHint {
+  color: rgb(var(--primary-6));
+  font-size: 12px;
+}
+
+.valueCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.pendingGroup {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-1);
+}
+
+@media (max-width: 1280px) {
+  .selectorPanel {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .schemeBComposer,
+  .schemeBTagItem,
+  .addSchemeSwitch {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

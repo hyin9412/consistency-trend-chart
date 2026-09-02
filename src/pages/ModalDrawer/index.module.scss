@@ -1,0 +1,203 @@
+.page {
+  padding: 20px 32px 24px;
+  background: #fff;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--color-text-3);
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  position: relative;
+  padding-left: 11px;
+  margin-bottom: 16px;
+  color: var(--color-text-1);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+}
+
+// Modal content
+
+.modalContent {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.vregionBar {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.vregionLabel {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--color-bg-3);
+  color: var(--color-text-2);
+  font-size: 13px;
+  border-right: 1px solid var(--color-border-2);
+}
+
+.vregionValue {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--color-text-1);
+}
+
+.configSection {
+  margin-top: 20px;
+}
+
+.configSectionTitle {
+  position: relative;
+  padding-left: 11px;
+  margin-bottom: 12px;
+  color: var(--color-text-1);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px;
+    content: '';
+  }
+}
+
+.configCard {
+  padding: 16px 20px;
+  background: var(--color-bg-3);
+  border: 1px solid var(--color-border-2);
+  border-radius: 6px;
+}
+
+.idcList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.idcCard {
+  position: relative;
+  padding: 16px 48px 16px 20px;
+  background: var(--color-bg-3);
+  border: 1px solid var(--color-border-2);
+  border-radius: 6px;
+}
+
+.idcDeleteBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: rgb(var(--danger-6));
+  font-size: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+.addConfigBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  color: rgb(var(--primary-6));
+  font-size: 13px;
+  background: none;
+  border: 1px dashed var(--color-border-1);
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgb(var(--primary-6));
+  }
+}
+
+// Drawer content
+
+.drawerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.drawerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.infoValue {
+  font-size: 14px;
+  color: var(--color-text-1);
+}

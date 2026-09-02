@@ -1,0 +1,120 @@
+.periodPicker {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1 1 285px;
+  width: clamp(285px, 30vw, 332px);
+  min-width: 285px;
+  max-width: 332px;
+  height: 32px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-1);
+  font-family: var(--app-font-family-base);
+  font-size: 13px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: rgb(var(--primary-5));
+  }
+}
+
+.periodPickerFocused {
+  border-color: rgb(var(--primary-6));
+  box-shadow: 0 0 0 2px rgba(var(--primary-6), 0.12);
+}
+
+.dateRangeTrigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dateText {
+  font-size: 13px;
+  font-family: var(--app-font-family-base);
+  color: var(--color-text-3);
+  line-height: 1;
+  white-space: nowrap;
+
+  &.hasValue {
+    color: var(--color-text-1);
+  }
+}
+
+.dateSep {
+  color: var(--color-text-3);
+  font-size: 13px;
+  font-family: var(--app-font-family-base);
+  flex-shrink: 0;
+}
+
+.calendarIcon {
+  margin-left: auto;
+  color: var(--color-text-3);
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.panelWithTabs {
+  overflow: hidden;
+  background: var(--color-bg-2);
+  border-radius: 4px;
+}
+
+.modeTabs {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border-2);
+  background: var(--color-bg-2);
+}
+
+.modeTab {
+  position: relative;
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-2);
+  font-size: 14px;
+  line-height: 48px;
+  cursor: pointer;
+
+  &:hover {
+    color: rgb(var(--primary-6));
+  }
+}
+
+.modeTabActive {
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+
+  &::after {
+    position: absolute;
+    right: 16px;
+    bottom: 0;
+    left: 16px;
+    height: 2px;
+    background: rgb(var(--primary-6));
+    border-radius: 1px 1px 0 0;
+    content: '';
+  }
+}
+
+.panelBody {
+  background: var(--color-bg-2);
+}

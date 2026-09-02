@@ -1,0 +1,9 @@
+node_modules/
+build/
+dist/
+*.scss.d.ts
+*.less.d.ts
+.DS_Store
+.turbo
+.cloud
+.eslintcache

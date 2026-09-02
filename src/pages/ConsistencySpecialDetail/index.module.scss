@@ -1,0 +1,416 @@
+.page {
+  min-height: 100%;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.globalTabs {
+  margin-top: 12px;
+}
+
+.tabContent {
+  padding: 20px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heroCard,
+.trendCard,
+.sideCard,
+.summaryCard,
+.tableCard {
+  border-radius: 4px;
+
+  :global(.arco-card-body),
+  :global(.arco-volc3-card-body) {
+    height: 100%;
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.heroPrimary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heroLabel {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-2);
+}
+
+.heroValue {
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-size: 42px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-1);
+}
+
+.heroMeta {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--color-text-2);
+}
+
+.progressPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.progressTitle {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  color: var(--color-text-1);
+}
+
+.progressDesc {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--color-text-3);
+}
+
+.progressStage {
+  position: relative;
+  padding: 36px 0 28px;
+}
+
+.progressBar {
+  position: relative;
+  z-index: 1;
+}
+
+.currentMarker {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(22, 93, 255, 0.1);
+  color: rgb(var(--primary-6));
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.referenceMarker {
+  position: absolute;
+  top: 34px;
+  bottom: 18px;
+  z-index: 2;
+  width: 0;
+  border-left: 1px dashed var(--color-text-3);
+}
+
+.referenceLabel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+}
+
+.trendRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 320px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.cardHeader,
+.cardHeaderCompact {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeader {
+  margin-bottom: 16px;
+}
+
+.cardHeaderCompact {
+  margin-bottom: 12px;
+}
+
+.moduleTitle {
+  position: relative;
+  padding-left: 11px;
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+
+  &::before {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 3px;
+    height: 12px;
+    border-radius: 1px;
+    background: rgb(var(--primary-6));
+    content: '';
+  }
+}
+
+.helperText {
+  margin-top: 4px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.rangeSwitch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chartStage {
+  min-height: 320px;
+}
+
+.trendVChart,
+.trendVChartLarge {
+  width: 100%;
+}
+
+.trendVChart {
+  min-height: 320px;
+}
+
+.trendVChartLarge {
+  min-height: 500px;
+
+  :global(canvas) {
+    border-radius: 4px;
+  }
+}
+
+.rankingList,
+.summaryList,
+.handlerList {
+  display: flex;
+  flex-direction: column;
+}
+
+.rankingList {
+  gap: 12px;
+}
+
+.rankingItem {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.rankIndex {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-fill-2);
+  color: var(--color-text-1);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: center;
+}
+
+.rankMain {
+  min-width: 0;
+}
+
+.rankName {
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 14px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankValue,
+.summaryValue,
+.handlerCount,
+.pillValue,
+.monoValue {
+  font-family: Roboto, 'PingFang SC', sans-serif;
+}
+
+.rankValue {
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.miniBar,
+.handlerBar {
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-fill-2);
+}
+
+.miniBarValue,
+.handlerBarValue {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(22, 93, 255, 0.8), rgb(var(--primary-6)));
+}
+
+.summaryItem,
+.handlerItem {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-2);
+
+  &:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.summaryItem {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.summaryTextBlock {
+  min-width: 0;
+}
+
+.summaryLabel,
+.handlerName {
+  color: var(--color-text-1);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.summaryHint {
+  margin-top: 2px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.summaryValue {
+  color: var(--color-text-1);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.handlerItem {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.handlerMain {
+  min-width: 0;
+}
+
+.handlerCount {
+  color: var(--color-text-2);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.tableSummary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.summaryPill {
+  min-width: 170px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: var(--color-bg-3);
+}
+
+.pillLabel {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.pillValue {
+  margin-top: 4px;
+  color: var(--color-text-1);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.chartModalBody {
+  padding-top: 8px;
+}
+
+@media (max-width: 1280px) {
+  .heroGrid,
+  .trendRow,
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .tabContent {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .summaryItem,
+  .handlerItem {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+}

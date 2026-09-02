@@ -1,0 +1,75 @@
+.page {
+  background: #fff;
+}
+
+.content {
+  padding: 0 32px 24px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.toolbarLeft {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tabs {
+  flex-shrink: 0;
+}
+
+.searchInput {
+  width: 320px;
+}
+
+.serviceCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.serviceName {
+  color: rgb(var(--primary-6));
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.serviceSubtext {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.starBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  font-size: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.starActive {
+  color: #fadb14;
+}
+
+.starInactive {
+  color: var(--color-text-3);
+
+  &:hover {
+    color: var(--color-text-2);
+  }
+}

@@ -1,0 +1,85 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --app-font-family-base: Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  font-family: var(--app-font-family-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  font-family: var(--app-font-family-base);
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+}
+
+#tod-side-menu {
+  position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+
+  .arco-menu-item svg {
+    color: var(--color-functional-icon-1);
+  }
+
+  .arco-menu-inline-header {
+    height: 36px;
+    line-height: 36px;
+
+    svg {
+      color: var(--color-functional-icon-1);
+    }
+  }
+
+  .arco-menu-inline.arco-menu-open > .arco-menu-inline-header {
+    .prefix-icon-container svg {
+      color: rgb(var(--primary-6)) !important;
+    }
+  }
+
+  .tod-side-menu-menu-item {
+    height: 36px;
+    line-height: 36px;
+  }
+
+  .arco-menu-item.arco-menu-selected {
+    .prefix-icon-container svg {
+      color: rgb(var(--primary-6)) !important;
+    }
+  }
+
+  .arco-menu-selected.arco-menu-item {
+    color: rgb(var(--primary-6)) !important;
+  }
+
+  .prefix-icon-container {
+    display: flex;
+    align-items: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+
+    > svg {
+      margin-right: 0;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
