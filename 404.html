@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting...</title>
+    <script>
+      (function () {
+        var pathname = window.location.pathname;
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        var segmentCount = 1;
+        var repoPath = pathname
+          .split('/')
+          .slice(0, 1 + segmentCount)
+          .join('/');
+        var routePath = pathname
+          .slice(repoPath.length)
+          .replace(/&/g, '~and~');
+        var target = repoPath + '/?/' + routePath.replace(/^\//, '');
+        if (search) {
+          target += '&' + search.slice(1).replace(/&/g, '~and~');
+        }
+        window.location.replace(target + hash);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
