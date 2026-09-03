@@ -13,14 +13,18 @@
           .split('/')
           .slice(0, 1 + segmentCount)
           .join('/');
-        var routePath = pathname
-          .slice(repoPath.length)
-          .replace(/&/g, '~and~');
-        var target = repoPath + '/?/' + routePath.replace(/^\//, '');
+        var routePath = pathname.slice(repoPath.length) || '/';
+        var params = new URLSearchParams();
+
+        params.set('__gh_path', routePath);
         if (search) {
-          target += '&' + search.slice(1).replace(/&/g, '~and~');
+          params.set('__gh_search', search.slice(1));
         }
-        window.location.replace(target + hash);
+        if (hash) {
+          params.set('__gh_hash', hash.slice(1));
+        }
+
+        window.location.replace(repoPath + '/?' + params.toString());
       })();
     </script>
   </head>
