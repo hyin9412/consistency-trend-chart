@@ -2142,7 +2142,7 @@ function SchemeFourChart() {
   return (
     <div className={styles.schemeStack} ref={containerRef}>
       <div className={styles.compactRuleText}>
-        默认单图总览，不管选择几个计费单元和几个大区都全部展示在一张图中；切换多图拆分后，按指标一图展示计费单元 × 大区粒度。
+        默认单图聚合，不管选择几个计费单元和几个大区都全部展示在一张图中；切换多图拆分后，按指标一图展示计费单元 × 大区粒度。
       </div>
 
       <div className={styles.dualAxisOuterToolbar}>
@@ -2192,7 +2192,7 @@ function SchemeFourChart() {
               triggerProps={{ popupStyle: { width: 180 } }}
             />
             <Radio.Group value={viewMode} type="button" onChange={(value) => setViewMode(value as FinalViewMode)}>
-              <Radio value="single">单图总览</Radio>
+              <Radio value="single">单图聚合</Radio>
               <Radio value="multiple">多图拆分</Radio>
             </Radio.Group>
           </div>
