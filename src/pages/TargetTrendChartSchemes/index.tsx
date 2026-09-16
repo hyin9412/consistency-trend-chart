@@ -1,15 +1,17 @@
-import { Button, Card, Divider, Message, PageHeader, Select, Tabs } from '@tod-m/materials/ve-o';
+import { Button, Card, Divider, Message, PageHeader, Radio, Select, Tabs } from '@tod-m/materials/ve-o';
 import { VChart as VChartCore, type ICommonChartSpec, type ILineChartSpec, type IVChart } from '@visactor/vchart';
 import { VChart } from '@visactor/react-vchart';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './index.module.scss';
 
-type SchemeKey = 'facets' | 'focus' | 'dualAxis' | 'dualAxisFacets';
+type SchemeKey = 'facets' | 'focus' | 'dualAxis' | 'dualAxisTable' | 'dualAxisFacets';
 type MetricKey = 'estimatePrice' | 'unitCost' | 'resourceCost' | 'markupRate' | 'sellRate';
 type LineKind = 'actual' | 'target';
 type AxisValueType = 'price' | 'rate';
-type DualAxisColorMode = 'metric' | 'combo';
-type DualAxisLegendMode = 'metric' | 'combo';
+type DualAxisColorMode = 'metric' | 'combo' | 'comboMetric';
+type DualAxisLegendMode = 'metric' | 'combo' | 'comboMetric' | 'comboMetricGroup' | 'comboMetricLine';
+type DualAxisTooltipMode = 'list' | 'table';
+type FinalViewMode = 'single' | 'multiple';
 
 interface MetricConfig {
   key: MetricKey;
@@ -72,6 +74,7 @@ const PERIODS = ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08
 const CNY_EXCHANGE_RATE = 7.2;
 const DEFAULT_BILLING_UNITS = ['bytegraph.cpu'];
 const DEFAULT_REGIONS = ['cn'];
+const SELECT_ALL_OPTION_VALUE = '__all__';
 
 const BILLING_UNIT_OPTIONS = [
   { label: 'bytegraph.cpu', value: 'bytegraph.cpu' },
@@ -155,6 +158,14 @@ const DIMENSIONS: DimensionConfig[] = [
 
 const DRILLDOWN_LEGEND_ID = 'target-trend-drilldown-legend';
 const DRILLDOWN_DIMENSION_NAMES = DIMENSIONS.map((item) => item.name);
+const TOOLTIP_FONT_FAMILY = 'Roboto, "PingFang SC", sans-serif';
+const TOOLTIP_BODY_FONT_SIZE = 12;
+const TOOLTIP_BODY_LINE_HEIGHT = 20;
+const TOOLTIP_BODY_FONT_WEIGHT = 400;
+const FINAL_SCHEME_TOOLTIP_MAX_HEIGHT = 420;
+const FINAL_SCHEME_TOOLTIP_MAX_WIDTH = 500;
+const LEGEND_PAGER_ARROW_UP = 'M3 7.5L6 4.5L9 7.5';
+const LEGEND_PAGER_ARROW_DOWN = 'M3 4.5L6 7.5L9 4.5';
 
 const getToken = (name: string, fallback: string) => {
   if (typeof window === 'undefined') return fallback;
@@ -190,9 +201,24 @@ const getDynamicAxisRange = (data: DualAxisTrendDatum[], axisValueType: AxisValu
   };
 };
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const getMetricDisplayUnit = (metric: MetricConfig) => {
   if (metric.unit === '%') return '%';
   return metric.unit.replace('美元', '人民币');
+};
+
+const getMetricTitleDisplayUnit = (metric: MetricConfig) => getMetricDisplayUnit(metric).replace('人民币', '元');
+
+const formatPeriodToDateGranularity = (value: string | string[]) => {
+  const rawValue = String(Array.isArray(value) ? value[0] : value);
+  return /^\d{4}-\d{2}$/.test(rawValue) ? `${rawValue}-01` : rawValue;
 };
 
 const getCombinationFactor = (billingUnit: string, region: string, periodIndex: number) => {
@@ -202,6 +228,45 @@ const getCombinationFactor = (billingUnit: string, region: string, periodIndex: 
 };
 
 const normalizeSelection = (value: string[] | string) => (Array.isArray(value) ? value : [value]);
+const getValidSelectValues = (options: Array<{ value: string }>) => options.map((option) => option.value);
+const getAllSelectionState = (selectedValues: string[], options: Array<{ value: string }>) => {
+  const validValues = new Set(getValidSelectValues(options));
+  const selectedCount = selectedValues.filter((item) => validValues.has(item)).length;
+
+  if (selectedCount === 0) return 'none';
+  return selectedCount === validValues.size ? 'all' : 'partial';
+};
+const buildOptionsWithSelectAll = (options: Array<{ label: string; value: string }>, allState: 'none' | 'partial' | 'all') => [
+  {
+    label: (
+      <span
+        className={
+          allState === 'partial'
+            ? styles.finalSelectAllOptionIndeterminate
+            : allState === 'all'
+              ? styles.finalSelectAllOptionChecked
+              : undefined
+        }
+      >
+        全选
+      </span>
+    ),
+    value: SELECT_ALL_OPTION_VALUE,
+  },
+  ...options,
+];
+const normalizeSelectionWithAll = (
+  value: string[] | string,
+  options: Array<{ value: string }>,
+  currentValues: string[],
+) => {
+  const values = normalizeSelection(value);
+  const availableValues = new Set(getValidSelectValues(options));
+  const isAllSelected = currentValues.filter((item) => availableValues.has(item)).length === availableValues.size;
+  if (values.includes(SELECT_ALL_OPTION_VALUE)) return isAllSelected ? [] : [...availableValues];
+
+  return values.filter((item) => availableValues.has(item));
+};
 const normalizeMetricSelection = (value: string[] | string): MetricKey[] =>
   normalizeSelection(value).filter((key): key is MetricKey => METRICS.some((metric) => metric.key === key));
 
@@ -215,12 +280,32 @@ const reorderList = <T,>(list: T[], fromIndex: number, toIndex: number) => {
 };
 
 const getClientPointFromVChartEvent = (event: any) => {
-  const sourceEvent = event?.event?.nativeEvent ?? event?.nativeEvent ?? event?.event ?? event;
+  const sourceEvents = [
+    event?.event?.detail?.event?.nativeEvent,
+    event?.event?.detail?.event,
+    event?.value?.event?.nativeEvent,
+    event?.value?.event,
+    event?.event?.nativeEvent,
+    event?.nativeEvent,
+    event?.event,
+    event,
+  ];
+  const sourceEvent = sourceEvents.find((item) => typeof item?.clientX === 'number' || typeof item?.viewX === 'number');
   const clientX = sourceEvent?.clientX ?? sourceEvent?.viewX;
   const clientY = sourceEvent?.clientY ?? sourceEvent?.viewY;
 
   if (typeof clientX !== 'number' || typeof clientY !== 'number') return null;
   return { clientX, clientY };
+};
+
+const isLegendFocusIconEvent = (event: any) => {
+  const targetNames = [
+    event?.event?.detail?.event?.target?.name,
+    event?.value?.event?.target?.name,
+    event?.event?.target?.name,
+    event?.target?.name,
+  ];
+  return targetNames.includes('legendItemFocus');
 };
 
 const getMetricByKey = (key: MetricKey) => METRICS.find((item) => item.key === key) ?? METRICS[0];
@@ -230,10 +315,58 @@ const getMetricColor = (metricKey: MetricKey) => {
   return ORIGIN_CHART_COLOR_PALETTE[Math.max(metricIndex, 0) % ORIGIN_CHART_COLOR_PALETTE.length];
 };
 
+const getMetricSortIndex = (metricKey?: MetricKey) => {
+  const index = METRICS.findIndex((metric) => metric.key === metricKey);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+};
+
+const isSameStringArray = (left: string[] | null, right: string[] | null) =>
+  left === right || Boolean(left && right && left.length === right.length && left.every((item, index) => item === right[index]));
+
 const getComboColor = (billingUnit: string, region: string, billingUnits: string[], regions: string[]) => {
   const comboIndex = billingUnits.indexOf(billingUnit) * regions.length + regions.indexOf(region);
   return ORIGIN_CHART_COLOR_PALETTE[Math.max(comboIndex, 0) % ORIGIN_CHART_COLOR_PALETTE.length];
 };
+
+const getComboMetricColor = (
+  billingUnit: string,
+  region: string,
+  metricKey: MetricKey,
+  billingUnits: string[],
+  regions: string[],
+  metricKeys: MetricKey[],
+) => {
+  const comboIndex = billingUnits.indexOf(billingUnit) * regions.length + regions.indexOf(region);
+  const metricIndex = metricKeys.indexOf(metricKey);
+  const colorIndex = Math.max(comboIndex, 0) * Math.max(metricKeys.length, 1) + Math.max(metricIndex, 0);
+  return ORIGIN_CHART_COLOR_PALETTE[colorIndex % ORIGIN_CHART_COLOR_PALETTE.length];
+};
+
+const getComboMetricLegendName = (datum: Pick<DualAxisTrendDatum, 'combo' | 'metricName'>) =>
+  `${datum.combo}, ${datum.metricName}`;
+
+const getLineKindLabel = (lineKind: LineKind) => (lineKind === 'actual' ? '实际' : '目标');
+
+const getComboMetricGroupLabel = (datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'metricName'>) =>
+  `[${datum.billingUnit}×${datum.region}] ${datum.metricName}`;
+
+const getComboMetricLineLabel = (
+  datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'metricName' | 'lineKind'>,
+) => `[${datum.billingUnit}×${datum.region}] ${datum.metricName}（${getLineKindLabel(datum.lineKind)}）`;
+
+const getComboLineKindLabel = (datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'lineKind'>) =>
+  `${datum.billingUnit} × ${datum.region} （${getLineKindLabel(datum.lineKind)}）`;
+
+const getDualAxisLegendName = (datum: DualAxisTrendDatum, legendMode: DualAxisLegendMode) =>
+  legendMode === 'metric'
+    ? datum.metricName
+    : legendMode === 'combo'
+      ? datum.combo
+      : legendMode === 'comboMetricLine'
+        ? getComboMetricLineLabel(datum)
+        : legendMode === 'comboMetricGroup'
+          ? getComboMetricGroupLabel(datum)
+          : getComboMetricLegendName(datum);
 
 const calculateAttainmentRate = (metric: MetricConfig, index: number) => {
   const actual = metric.actual[index];
@@ -330,7 +463,11 @@ const buildDualAxisTrendData = (
           const valueMultiplier = axisValueType === 'price' ? CNY_EXCHANGE_RATE : 1;
           const precision = axisValueType === 'price' ? 5 : 2;
           const color =
-            colorMode === 'combo' ? getComboColor(billingUnit, region, billingUnits, regions) : getMetricColor(metric.key);
+            colorMode === 'comboMetric'
+              ? getComboMetricColor(billingUnit, region, metric.key, billingUnits, regions, metricKeys)
+              : colorMode === 'combo'
+                ? getComboColor(billingUnit, region, billingUnits, regions)
+                : getMetricColor(metric.key);
 
           return [
             {
@@ -434,6 +571,37 @@ const buildDrilldownLegendSpec = (colorText2: string, colorText3: string) => ({
     },
   },
   title: { visible: false },
+  pager: {
+    layout: 'vertical',
+    handler: {
+      space: 4,
+      preShape: LEGEND_PAGER_ARROW_UP,
+      nextShape: LEGEND_PAGER_ARROW_DOWN,
+      style: {
+        size: 12,
+        fill: false,
+        stroke: colorText2,
+        lineWidth: 1.8,
+        lineCap: 'round',
+        lineJoin: 'round',
+      },
+      state: {
+        hover: {
+          stroke: colorText2,
+        },
+        disable: {
+          stroke: colorText2,
+          opacity: 0.4,
+        },
+      },
+    },
+    textStyle: {
+      fill: '#1d2129',
+      fontFamily: 'Roboto, "PingFang SC", sans-serif',
+      fontSize: 12,
+      lineHeight: 20,
+    },
+  },
   padding: [8, 0, 0, 0],
 } as any);
 
@@ -459,6 +627,9 @@ const buildDualAxisLegendSpec = (
   colorText3: string,
   legendItems: SelectableLegendItem[],
   legendMode: DualAxisLegendMode,
+  defaultSelected?: string[],
+  showFocusIcon = false,
+  focusIconColor = colorText3,
 ) => ({
   visible: true,
   orient: 'bottom',
@@ -469,18 +640,28 @@ const buildDualAxisLegendSpec = (
     trigger: 'click',
   },
   allowAllCanceled: true,
+  defaultSelected,
   data: buildSelectableLegendItems(legendItems),
   customFilter: (data: DualAxisTrendDatum[], selectedItems: Array<string | number>) =>
-    data.filter((datum) => selectedItems.includes(legendMode === 'metric' ? datum.metricName : datum.combo)),
+    data.filter((datum) => {
+      const legendName = getDualAxisLegendName(datum, legendMode);
+      return selectedItems.includes(legendName);
+    }),
   item: {
     spaceCol: 18,
-    spaceRow: 8,
+    spaceRow: 4,
     padding: 2,
     shape: {
       space: 6,
       style: {
         size: 8,
       },
+    },
+    focus: showFocusIcon,
+    focusIconStyle: {
+      size: 12,
+      fill: focusIconColor,
+      cursor: 'pointer',
     },
     label: {
       space: 6,
@@ -634,10 +815,117 @@ const buildDualAxisLineSeriesSpec = (dataId: string, axisValueType: AxisValueTyp
 const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: number) => {
   tooltipElement.dataset.targetTrendScrollableTooltip = 'true';
   tooltipElement.style.maxHeight = `${maxHeight}px`;
+  tooltipElement.style.width = 'max-content';
+  tooltipElement.style.maxWidth = `${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px`;
   tooltipElement.style.overflowY = 'auto';
   tooltipElement.style.overflowX = 'hidden';
   tooltipElement.style.pointerEvents = 'auto';
   tooltipElement.style.overscrollBehavior = 'contain';
+
+  tooltipElement.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    element.style.maxWidth = `${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px`;
+  });
+  tooltipElement.querySelectorAll<HTMLElement>('[class*="value"], [class*="Value"]').forEach((element) => {
+    element.style.whiteSpace = 'nowrap';
+  });
+};
+
+const getTooltipMarkerColor = (datum: DualAxisTrendDatum, fallback?: string) =>
+  escapeHtml(datum.color || fallback || '#A9AEB8');
+
+const renderTooltipLineKindMarker = (datum: DualAxisTrendDatum, fallbackColor?: string) => {
+  const color = getTooltipMarkerColor(datum, fallbackColor);
+  if (datum.lineKind === 'target') {
+    return `<span style="display: inline-block; width: 10px; height: 2px; flex: 0 0 auto; border-radius: 99px; background: repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 5px); vertical-align: middle;"></span>`;
+  }
+
+  return `<span style="display: inline-block; width: 10px; height: 10px; flex: 0 0 auto; border-radius: 2px; background: ${color}; vertical-align: middle;"></span>`;
+};
+
+const applyLineKindTooltipMarkerStyle = (tooltipElement: HTMLElement, actualTooltip: any) => {
+  const content = Array.isArray(actualTooltip?.content) ? actualTooltip.content : [];
+  const shapeColumn = tooltipElement.querySelector<HTMLElement>('[data-col="shape"]');
+  if (!shapeColumn) return;
+
+  const shapeRows = Array.from(shapeColumn.children) as HTMLElement[];
+  content.forEach((item: any, index: number) => {
+    const datum = item?.datum as DualAxisTrendDatum | undefined;
+    const shapeRow = shapeRows[index];
+    if (!datum || datum.lineKind !== 'target' || !shapeRow) return;
+
+    shapeRow.innerHTML = renderTooltipLineKindMarker(datum, item.shapeStroke || item.shapeFill);
+  });
+};
+
+const formatDualAxisTooltipValue = (datum: DualAxisTrendDatum) =>
+  datum.axisValueType === 'rate'
+    ? `${datum.value.toFixed(1)}%`
+    : `${formatCnyValue(datum.value)} ${datum.valueUnit.replace('人民币/', '/')}`;
+
+const renderDualAxisTooltipTable = (tooltipElement: HTMLElement, actualTooltip: any, maxHeight?: number) => {
+  if (maxHeight) {
+    applyScrollableTooltipStyle(tooltipElement, maxHeight);
+  } else {
+    tooltipElement.dataset.targetTrendScrollableTooltip = 'true';
+    tooltipElement.style.maxHeight = '';
+    tooltipElement.style.overflowY = '';
+    tooltipElement.style.overflowX = '';
+    tooltipElement.style.pointerEvents = 'auto';
+    tooltipElement.style.overscrollBehavior = 'contain';
+  }
+
+  const content = Array.isArray(actualTooltip?.content) ? actualTooltip.content : [];
+  const tableRows: DualAxisTrendDatum[] = content
+    .map((item: any) => item?.datum as DualAxisTrendDatum | undefined)
+    .filter((datum: DualAxisTrendDatum | undefined): datum is DualAxisTrendDatum => Boolean(datum))
+    .sort((a: DualAxisTrendDatum, b: DualAxisTrendDatum) => {
+      const metricDiff = getMetricSortIndex(a.metric) - getMetricSortIndex(b.metric);
+      if (metricDiff !== 0) return metricDiff;
+
+      const comboDiff = a.combo.localeCompare(b.combo);
+      if (comboDiff !== 0) return comboDiff;
+
+      return a.lineKind === b.lineKind ? 0 : a.lineKind === 'actual' ? -1 : 1;
+    });
+
+  if (!tableRows.length) return;
+
+  const title = `${actualTooltip?.title?.value ?? actualTooltip?.title?.key ?? ''}`.trim();
+
+  tooltipElement.innerHTML = `
+    <div style="width: max-content; max-width: ${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px; color: var(--color-text-1, #1d2129); font-family: Roboto, 'PingFang SC', sans-serif;">
+      ${
+        title
+          ? `<div style="margin-bottom: 8px; color: var(--color-text-3, #86909c); font-family: Roboto, 'PingFang SC', sans-serif; font-size: 12px; line-height: 20px; font-weight: 400;">${escapeHtml(title)}</div>`
+          : ''
+      }
+      <table style="width: 100%; max-width: ${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px; border-collapse: collapse; table-layout: fixed; font-size: 12px; line-height: 20px;">
+        <thead>
+          <tr>
+            <th style="width: 360px; padding: 0 12px 6px 0; border-bottom: 1px solid var(--color-border-2, #eaedf1); color: var(--color-text-3, #86909c); font-weight: 400; text-align: left;">Label</th>
+            <th style="width: 96px; padding: 0 0 6px 0; border-bottom: 1px solid var(--color-border-2, #eaedf1); color: var(--color-text-3, #86909c); font-weight: 400; text-align: right;">值</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows
+            .map(
+              (datum) => `
+                <tr>
+                  <td style="padding: 7px 12px 7px 0; border-bottom: 1px solid var(--color-border-1, #f2f3f5); color: var(--color-text-3, #86909c); font-family: Roboto, 'PingFang SC', sans-serif; font-size: 12px; line-height: 20px; font-weight: 400; white-space: normal; overflow-wrap: anywhere;">
+                    <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                      ${renderTooltipLineKindMarker(datum)}
+                      <span style="min-width: 0; overflow-wrap: anywhere;">${escapeHtml(getComboMetricLineLabel(datum))}</span>
+                    </span>
+                  </td>
+                  <td style="padding: 7px 0 7px 0; border-bottom: 1px solid var(--color-border-1, #f2f3f5); color: var(--color-text-2, #4e5969); font-family: Roboto, 'PingFang SC', sans-serif; font-size: 12px; line-height: 20px; font-weight: 400; text-align: right; white-space: nowrap;">${escapeHtml(formatDualAxisTooltipValue(datum))}</td>
+                </tr>
+              `,
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 };
 
 const buildDualAxisLineSpec = (
@@ -648,21 +936,121 @@ const buildDualAxisLineSpec = (
   legendMode: DualAxisLegendMode = 'metric',
   showMetricInTooltip = true,
   tooltipMaxHeight?: number,
+  tooltipMode: DualAxisTooltipMode = 'table',
+  selectedLegendNames?: string[] | null,
+  showLegendFocusIcon = false,
+  legendFocusIconColor?: string,
+  showDateGranularityXAxis = false,
 ): ICommonChartSpec => {
+  const activeLegendNameSet = selectedLegendNames ? new Set(selectedLegendNames) : null;
+  const visibleData = activeLegendNameSet
+    ? data.filter((item) => activeLegendNameSet.has(getDualAxisLegendName(item, legendMode)))
+    : data;
   const priceData = data.filter((item) => item.axisValueType === 'price');
   const rateData = data.filter((item) => item.axisValueType === 'rate');
-  const priceAxisRange = getDynamicAxisRange(priceData, 'price');
-  const rateAxisRange = getDynamicAxisRange(rateData, 'rate');
+  const visiblePriceData = visibleData.filter((item) => item.axisValueType === 'price');
+  const visibleRateData = visibleData.filter((item) => item.axisValueType === 'rate');
+  const hasVisiblePriceData = visiblePriceData.length > 0;
+  const hasVisibleRateData = visibleRateData.length > 0;
+  const isDualAxis = hasVisiblePriceData && hasVisibleRateData;
+  const singleAxisValueType: AxisValueType = hasVisibleRateData && !hasVisiblePriceData ? 'rate' : 'price';
+  const priceAxisRange = getDynamicAxisRange(visiblePriceData, 'price');
+  const rateAxisRange = getDynamicAxisRange(visibleRateData, 'rate');
+  const singleAxisRange = singleAxisValueType === 'rate' ? rateAxisRange : priceAxisRange;
   const legendItems =
     legendMode === 'metric'
       ? METRICS.filter((metric) => data.some((item) => item.metric === metric.key)).map((metric) => ({
           name: metric.name,
           color: getMetricColor(metric.key),
         }))
-      : Array.from(new Map(data.map((item) => [item.combo, item.color])).entries()).map(([name, color]) => ({
+      : Array.from(
+          new Map(
+            data.map((item) => [
+              legendMode === 'comboMetricLine'
+                ? getComboMetricLineLabel(item)
+                : legendMode === 'comboMetricGroup'
+                  ? getComboMetricGroupLabel(item)
+                  : legendMode === 'comboMetric'
+                  ? getComboMetricLegendName(item)
+                  : item.combo,
+              item.color,
+            ]),
+          ).entries(),
+        ).map(([name, color]) => ({
           name,
           color,
         }));
+  const axes = [
+    {
+      orient: 'bottom',
+      type: 'band',
+      label: {
+        visible: true,
+        space: 2,
+        style: { fill: colorText3 },
+        formatMethod: showDateGranularityXAxis ? formatPeriodToDateGranularity : undefined,
+      },
+      title: { visible: false },
+    },
+    ...(isDualAxis
+      ? [
+          {
+            orient: 'left',
+            id: 'priceAxis',
+            type: 'linear',
+            seriesId: ['priceSeries'],
+            min: priceAxisRange.min,
+            max: priceAxisRange.max,
+            label: {
+              visible: true,
+              space: 4,
+              style: { fill: colorText3 },
+              formatMethod: (value: string | string[]) =>
+                formatCnyValue(Number(Array.isArray(value) ? value[0] : value)),
+            },
+            grid: { visible: true, style: { stroke: colorBorder2, lineDash: [4, 3], lineWidth: 1 } },
+            title: { visible: false },
+          },
+          {
+            orient: 'right',
+            id: 'rateAxis',
+            type: 'linear',
+            min: rateAxisRange.min,
+            max: rateAxisRange.max,
+            seriesId: ['rateSeries'],
+            label: {
+              visible: true,
+              space: 4,
+              style: { fill: colorText3 },
+              formatMethod: (value: string | string[]) =>
+                `${Number(Array.isArray(value) ? value[0] : value).toFixed(0)}%`,
+            },
+            grid: { visible: false },
+            title: { visible: false },
+          },
+        ]
+      : [
+          {
+            orient: 'left',
+            id: singleAxisValueType === 'rate' ? 'rateAxis' : 'priceAxis',
+            type: 'linear',
+            seriesId: [singleAxisValueType === 'rate' ? 'rateSeries' : 'priceSeries'],
+            min: singleAxisRange.min,
+            max: singleAxisRange.max,
+            label: {
+              visible: true,
+              space: 4,
+              style: { fill: colorText3 },
+              formatMethod: (value: string | string[]) => {
+                const rawValue = Number(Array.isArray(value) ? value[0] : value);
+                return singleAxisValueType === 'rate' ? `${rawValue.toFixed(0)}%` : formatCnyValue(rawValue);
+              },
+            },
+            grid: { visible: true, style: { stroke: colorBorder2, lineDash: [4, 3], lineWidth: 1 } },
+            title: { visible: false },
+          },
+        ]),
+  ];
 
   return {
     type: 'common',
@@ -677,69 +1065,63 @@ const buildDualAxisLineSpec = (
       buildDualAxisLineSeriesSpec('dualAxisPriceData', 'price'),
       buildDualAxisLineSeriesSpec('dualAxisRateData', 'rate'),
     ],
-    axes: [
-      {
-        orient: 'bottom',
-        type: 'band',
-        label: { visible: true, space: 2, style: { fill: colorText3 } },
-        title: { visible: false },
-      },
-      {
-        orient: 'left',
-        id: 'priceAxis',
-        type: 'linear',
-        seriesId: ['priceSeries'],
-        min: priceAxisRange.min,
-        max: priceAxisRange.max,
-        label: {
-          visible: true,
-          space: 4,
-          style: { fill: colorText3 },
-          formatMethod: (value: string | string[]) => formatCnyValue(Number(Array.isArray(value) ? value[0] : value)),
-        },
-        grid: { visible: true, style: { stroke: colorBorder2, lineDash: [4, 3], lineWidth: 1 } },
-        title: { visible: false },
-      },
-      {
-        orient: 'right',
-        id: 'rateAxis',
-        type: 'linear',
-        min: rateAxisRange.min,
-        max: rateAxisRange.max,
-        seriesId: ['rateSeries'],
-        label: {
-          visible: true,
-          space: 4,
-          style: { fill: colorText3 },
-          formatMethod: (value: string | string[]) => `${Number(Array.isArray(value) ? value[0] : value).toFixed(0)}%`,
-        },
-        grid: { visible: false },
-        title: { visible: false },
-      },
+    axes: axes as any,
+    legends: [
+      buildDualAxisLegendSpec(
+        colorText2,
+        colorText3,
+        legendItems,
+        legendMode,
+        selectedLegendNames ?? undefined,
+        showLegendFocusIcon,
+        legendFocusIconColor,
+      ),
     ],
-    legends: [buildDualAxisLegendSpec(colorText2, colorText3, legendItems, legendMode)],
     tooltip: {
       renderMode: 'html',
-      updateElement: tooltipMaxHeight
-        ? (tooltipElement: HTMLElement) => applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight)
-        : undefined,
+      enterable: true,
+      updateElement: (tooltipElement: HTMLElement, actualTooltip: any) => {
+        if (tooltipMode === 'table') {
+          renderDualAxisTooltipTable(tooltipElement, actualTooltip, tooltipMaxHeight);
+          return;
+        }
+
+        if (tooltipMaxHeight) {
+          applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight);
+        }
+        applyLineKindTooltipMarkerStyle(tooltipElement, actualTooltip);
+      },
       dimension: {
         shapeType: 'square',
         shapeSize: 10,
         updateContent: (items: any[] = []) =>
-          items.map((item) => {
+          [...items].sort((a, b) => {
+            const datumA = a?.datum as DualAxisTrendDatum | undefined;
+            const datumB = b?.datum as DualAxisTrendDatum | undefined;
+            if (!datumA || !datumB) return 0;
+
+            const metricDiff = getMetricSortIndex(datumA.metric) - getMetricSortIndex(datumB.metric);
+            if (metricDiff !== 0) return metricDiff;
+
+            const comboDiff = datumA.combo.localeCompare(datumB.combo);
+            if (comboDiff !== 0) return comboDiff;
+
+            return datumA.lineKind === datumB.lineKind ? 0 : datumA.lineKind === 'actual' ? -1 : 1;
+          }).map((item) => {
             const datum = item?.datum as DualAxisTrendDatum | undefined;
             if (!datum) return item;
 
             return {
               ...item,
               key: showMetricInTooltip
-                ? `${datum.combo} / ${datum.metricName} / ${datum.lineKind === 'actual' ? '实际值' : '目标值'}`
-                : `${datum.combo} / ${datum.lineKind === 'actual' ? '实际值' : '目标值'}`,
+                ? getComboMetricLineLabel(datum)
+                : `[${datum.billingUnit}×${datum.region}] ${getLineKindLabel(datum.lineKind)}`,
               value:
                 datum.axisValueType === 'rate'
                   ? `${datum.value.toFixed(1)}%`
                   : `${formatCnyValue(datum.value)} ${datum.valueUnit.replace('人民币/', '/')}`,
+              shapeStroke: datum.color,
+              shapeFill: datum.color,
             };
           }),
       },
@@ -748,16 +1130,40 @@ const buildDualAxisLineSpec = (
         shapeSize: 10,
       },
       style: {
-        titleLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText3 },
-        keyLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText2 },
-        valueLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText2 },
+        titleLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText3,
+          textBaseline: 'middle',
+        },
+        keyLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText3,
+          textBaseline: 'middle',
+        },
+        valueLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText2,
+          textBaseline: 'middle',
+        },
         shape: { size: 10, spacing: 8 },
         spaceRow: 2,
       },
     },
     crosshair: {
       trigger: 'hover',
-      xField: { visible: true, line: { visible: true, type: 'rect', style: { fill: colorBorder2 } } },
+      xField: {
+        visible: true,
+        line: { visible: true, type: 'line', style: { stroke: '#C9CDD4', lineWidth: 1, lineDash: [0, 0] } },
+      },
       yField: { visible: false },
     },
   };
@@ -770,10 +1176,15 @@ const buildSingleAxisMetricLineSpec = (
   colorText3: string,
   colorBorder2: string,
   tooltipMaxHeight?: number,
+  showLegendFocusIcon = false,
+  legendFocusIconColor?: string,
+  showDateGranularityXAxis = false,
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
   const axisRange = getDynamicAxisRange(data, axisValueType);
-  const legendItems = Array.from(new Map(data.map((item) => [item.combo, item.color])).entries()).map(([name, color]) => ({
+  const legendItems = Array.from(
+    new Map(data.map((item) => [getComboMetricGroupLabel(item), item.color])).entries(),
+  ).map(([name, color]) => ({
     name,
     color,
   }));
@@ -827,7 +1238,12 @@ const buildSingleAxisMetricLineSpec = (
       {
         orient: 'bottom',
         type: 'band',
-        label: { visible: true, space: 2, style: { fill: colorText3 } },
+        label: {
+          visible: true,
+          space: 2,
+          style: { fill: colorText3 },
+          formatMethod: showDateGranularityXAxis ? formatPeriodToDateGranularity : undefined,
+        },
         title: { visible: false },
       },
       {
@@ -848,13 +1264,26 @@ const buildSingleAxisMetricLineSpec = (
         title: { visible: false },
       },
     ],
-    legends: [buildDualAxisLegendSpec(colorText2, colorText3, legendItems, 'combo')],
+    legends: [
+      buildDualAxisLegendSpec(
+        colorText2,
+        colorText3,
+        legendItems,
+        'comboMetricGroup',
+        undefined,
+        showLegendFocusIcon,
+        legendFocusIconColor,
+      ),
+    ],
     tooltip: {
       renderMode: 'html',
       confine: true,
       enterable: true,
       updateElement: tooltipMaxHeight
-        ? (tooltipElement: HTMLElement) => applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight)
+        ? (tooltipElement: HTMLElement, actualTooltip: any) => {
+            applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight);
+            applyLineKindTooltipMarkerStyle(tooltipElement, actualTooltip);
+          }
         : undefined,
       dimension: {
         shapeType: 'square',
@@ -866,11 +1295,13 @@ const buildSingleAxisMetricLineSpec = (
 
             return {
               ...item,
-              key: `${datum.combo} / ${datum.lineKind === 'actual' ? '实际值' : '目标值'}`,
+              key: getComboLineKindLabel(datum),
               value:
                 axisValueType === 'rate'
                   ? `${datum.value.toFixed(1)}%`
                   : `${formatCnyValue(datum.value)} ${datum.valueUnit.replace('人民币/', '/')}`,
+              shapeStroke: datum.color,
+              shapeFill: datum.color,
             };
           }),
       },
@@ -879,16 +1310,40 @@ const buildSingleAxisMetricLineSpec = (
         shapeSize: 10,
       },
       style: {
-        titleLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText3 },
-        keyLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText2 },
-        valueLabel: { fontFamily: 'Roboto, "PingFang SC", sans-serif', fontSize: 12, fill: colorText2 },
+        titleLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText3,
+          textBaseline: 'middle',
+        },
+        keyLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText3,
+          textBaseline: 'middle',
+        },
+        valueLabel: {
+          fontFamily: TOOLTIP_FONT_FAMILY,
+          fontSize: TOOLTIP_BODY_FONT_SIZE,
+          lineHeight: TOOLTIP_BODY_LINE_HEIGHT,
+          fontWeight: TOOLTIP_BODY_FONT_WEIGHT,
+          fill: colorText2,
+          textBaseline: 'middle',
+        },
         shape: { size: 10, spacing: 8 },
         spaceRow: 2,
       },
     },
     crosshair: {
       trigger: 'hover',
-      xField: { visible: true, line: { visible: true, type: 'rect', style: { fill: colorBorder2 } } },
+      xField: {
+        visible: true,
+        line: { visible: true, type: 'line', style: { stroke: '#C9CDD4', lineWidth: 1, lineDash: [0, 0] } },
+      },
       yField: { visible: false },
     },
   };
@@ -1248,7 +1703,13 @@ function SchemeTwoChart({
   );
 }
 
-function SchemeThreeChart() {
+function SchemeThreeChart({
+  tooltipMode = 'list',
+  errorLabel = '方案三',
+}: {
+  tooltipMode?: DualAxisTooltipMode;
+  errorLabel?: string;
+}) {
   const colorText2 = useMemo(() => getToken('--color-text-2', '#4E5969'), []);
   const colorText3 = useMemo(() => getToken('--color-text-3', '#86909C'), []);
   const colorBorder2 = useMemo(() => getToken('--color-border-2', '#EAEDF1'), []);
@@ -1263,14 +1724,14 @@ function SchemeThreeChart() {
   const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
   const chartData = useMemo(
     () =>
-      buildDualAxisTrendData(selectedBillingUnits, selectedRegions, selectedMetrics).filter((item) =>
+      buildDualAxisTrendData(selectedBillingUnits, selectedRegions, selectedMetrics, 'comboMetric').filter((item) =>
         selectedPeriods.includes(item.period),
       ),
     [selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
   );
   const spec = useMemo(
-    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'metric', true, 438),
-    [chartData, colorBorder2, colorText2, colorText3],
+    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'comboMetric', true, 438, tooltipMode),
+    [chartData, colorBorder2, colorText2, colorText3, tooltipMode],
   );
   const clearLockedTooltip = useCallback(() => {
     setLockedTooltipPeriod(null);
@@ -1378,7 +1839,7 @@ function SchemeThreeChart() {
               chartRef.current = chart;
             }}
             onDimensionClick={handleDimensionClick}
-            onError={(error) => Message.error(`方案三趋势图加载失败：${error.message}`)}
+            onError={(error) => Message.error(`${errorLabel}趋势图加载失败：${error.message}`)}
           />
         </div>
       </Card>
@@ -1390,49 +1851,92 @@ function SchemeFourChart() {
   const colorText2 = useMemo(() => getToken('--color-text-2', '#4E5969'), []);
   const colorText3 = useMemo(() => getToken('--color-text-3', '#86909C'), []);
   const colorBorder2 = useMemo(() => getToken('--color-border-2', '#EAEDF1'), []);
+  const colorFunctionalIcon1 = useMemo(() => getToken('--color-functional-icon-1', '#6B7785'), []);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const overviewChartRef = useRef<IVChart | null>(null);
   const splitChartRefs = useRef<Partial<Record<MetricKey, IVChart>>>({});
   const [selectedBillingUnits, setSelectedBillingUnits] = useState<string[]>(DEFAULT_BILLING_UNITS);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(DEFAULT_REGIONS);
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [timeWindow, setTimeWindow] = useState('last6Months');
+  const [viewMode, setViewMode] = useState<FinalViewMode>('single');
+  const [selectedOverviewLegendNames, setSelectedOverviewLegendNames] = useState<string[] | null>(null);
   const [metricOrder, setMetricOrder] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [draggingMetricKey, setDraggingMetricKey] = useState<MetricKey | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
   const [lockedTooltip, setLockedTooltip] = useState<{ metricKey: MetricKey; period: string } | null>(null);
+  const [legendFocusTooltip, setLegendFocusTooltip] = useState<{ x: number; y: number } | null>(null);
   const draggingMetricKeyRef = useRef<MetricKey | null>(null);
 
   const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
-  const isSplitByMetric = selectedBillingUnits.length * selectedRegions.length > 1;
+  const isMultipleMode = viewMode === 'multiple';
   const orderedSelectedMetrics = useMemo(
     () => metricOrder.filter((metricKey) => selectedMetrics.includes(metricKey)),
     [metricOrder, selectedMetrics],
   );
-  const chartData = useMemo(
+  const billingUnitAllState = useMemo(
+    () => getAllSelectionState(selectedBillingUnits, BILLING_UNIT_OPTIONS),
+    [selectedBillingUnits],
+  );
+  const regionAllState = useMemo(() => getAllSelectionState(selectedRegions, REGION_OPTIONS), [selectedRegions]);
+  const finalBillingUnitOptions = useMemo(
+    () => buildOptionsWithSelectAll(BILLING_UNIT_OPTIONS, billingUnitAllState),
+    [billingUnitAllState],
+  );
+  const finalRegionOptions = useMemo(() => buildOptionsWithSelectAll(REGION_OPTIONS, regionAllState), [regionAllState]);
+  const overviewChartData = useMemo(
     () =>
-      buildDualAxisTrendData(
-        selectedBillingUnits,
-        selectedRegions,
-        selectedMetrics,
-        isSplitByMetric ? 'combo' : 'metric',
-      ).filter((item) => selectedPeriods.includes(item.period)),
-    [isSplitByMetric, selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
+      buildDualAxisTrendData(selectedBillingUnits, selectedRegions, selectedMetrics, 'metric').filter((item) =>
+        selectedPeriods.includes(item.period),
+      ),
+    [selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
+  );
+  const splitChartData = useMemo(
+    () =>
+      buildDualAxisTrendData(selectedBillingUnits, selectedRegions, selectedMetrics, 'combo').filter((item) =>
+        selectedPeriods.includes(item.period),
+      ),
+    [selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
   );
   const overviewSpec = useMemo(
-    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'metric', true),
-    [chartData, colorBorder2, colorText2, colorText3],
+    () =>
+      buildDualAxisLineSpec(
+        overviewChartData,
+        colorText2,
+        colorText3,
+        colorBorder2,
+        'comboMetricGroup',
+        true,
+        FINAL_SCHEME_TOOLTIP_MAX_HEIGHT,
+        'list',
+        selectedOverviewLegendNames,
+        true,
+        colorFunctionalIcon1,
+        true,
+      ),
+    [colorFunctionalIcon1, overviewChartData, colorBorder2, colorText2, colorText3, selectedOverviewLegendNames],
   );
   const splitChartItems = useMemo(
     () =>
       orderedSelectedMetrics.map((metricKey) => {
         const metric = getMetricByKey(metricKey);
-        const metricData = chartData.filter((item) => item.metric === metric.key);
+        const metricData = splitChartData.filter((item) => item.metric === metric.key);
         return {
           metric,
-          spec: buildSingleAxisMetricLineSpec(metric, metricData, colorText2, colorText3, colorBorder2, 438),
+          spec: buildSingleAxisMetricLineSpec(
+            metric,
+            metricData,
+            colorText2,
+            colorText3,
+            colorBorder2,
+            FINAL_SCHEME_TOOLTIP_MAX_HEIGHT,
+            true,
+            colorFunctionalIcon1,
+            true,
+          ),
         };
       }),
-    [chartData, colorBorder2, colorText2, colorText3, orderedSelectedMetrics],
+    [colorBorder2, colorFunctionalIcon1, colorText2, colorText3, orderedSelectedMetrics, splitChartData],
   );
   const clearLockedTooltip = useCallback(() => {
     setLockedTooltip(null);
@@ -1453,6 +1957,34 @@ function SchemeFourChart() {
     },
     [orderedSelectedMetrics],
   );
+  const handleOverviewLegendSelectedDataChange = useCallback((event: any) => {
+    const selectedData =
+      overviewChartRef.current?.getLegendSelectedDataByIndex(0) ??
+      event?.value ??
+      event?.event?.detail?.currentSelected ??
+      [];
+    const nextSelectedLegendNames = selectedData.map(String);
+    setSelectedOverviewLegendNames((current) =>
+      isSameStringArray(current, nextSelectedLegendNames) ? current : nextSelectedLegendNames,
+    );
+  }, []);
+  const hideLegendFocusTooltip = useCallback(() => {
+    setLegendFocusTooltip(null);
+  }, []);
+  const handleLegendItemHover = useCallback((event: any) => {
+    if (!isLegendFocusIconEvent(event)) {
+      setLegendFocusTooltip(null);
+      return;
+    }
+
+    const point = getClientPointFromVChartEvent(event);
+    if (!point) return;
+
+    setLegendFocusTooltip({
+      x: Math.min(point.clientX + 10, window.innerWidth - 132),
+      y: Math.max(point.clientY - 34, 8),
+    });
+  }, []);
   const handleSplitDimensionClick = useCallback((metricKey: MetricKey, event: any) => {
     const period = event?.dimensionInfo?.[0]?.value;
     if (!period) return;
@@ -1542,8 +2074,13 @@ function SchemeFourChart() {
   }, [selectedMetrics]);
 
   useEffect(() => {
+    setSelectedOverviewLegendNames(null);
+  }, [selectedBillingUnits, selectedMetrics, selectedRegions, timeWindow]);
+
+  useEffect(() => {
     clearLockedTooltip();
-  }, [clearLockedTooltip, isSplitByMetric, selectedBillingUnits, selectedMetrics, selectedRegions, timeWindow]);
+    hideLegendFocusTooltip();
+  }, [clearLockedTooltip, hideLegendFocusTooltip, selectedBillingUnits, selectedMetrics, selectedRegions, timeWindow, viewMode]);
 
   useEffect(() => {
     if (!lockedTooltip) return undefined;
@@ -1607,149 +2144,183 @@ function SchemeFourChart() {
   return (
     <div className={styles.schemeStack} ref={containerRef}>
       <div className={styles.compactRuleText}>
-        默认勾选多指标，单组合时按指标分色；多计费单元或多大区时按指标拆图，并展示计费单元 × 大区粒度。
+        默认单图总览，不管选择几个计费单元和几个大区都全部展示在一张图中；切换多图拆分后，按指标一图展示计费单元 × 大区粒度。
       </div>
 
       <div className={styles.dualAxisOuterToolbar}>
-        <Select
-          addBefore="指标"
-          className={styles.dualAxisMultiSelect}
-          mode="multiple"
-          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
-          value={selectedMetrics}
-          options={METRIC_OPTIONS}
-          onChange={(value) => setSelectedMetrics(normalizeMetricSelection(value as string[] | string))}
-          triggerProps={{ popupStyle: { width: 320 } }}
-        />
-        <Select
-          addBefore="计费单元"
-          className={styles.dualAxisMultiSelect}
-          mode="multiple"
-          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
-          value={selectedBillingUnits}
-          options={BILLING_UNIT_OPTIONS}
-          onChange={(value) => setSelectedBillingUnits(normalizeSelection(value as string[] | string))}
-          triggerProps={{ popupStyle: { width: 280 } }}
-        />
-        <Select
-          addBefore="大区"
-          className={styles.dualAxisMultiSelect}
-          mode="multiple"
-          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
-          value={selectedRegions}
-          options={REGION_OPTIONS}
-          onChange={(value) => setSelectedRegions(normalizeSelection(value as string[] | string))}
-          triggerProps={{ popupStyle: { width: 180 } }}
-        />
-        <Select
-          addBefore="时间"
-          value={timeWindow}
-          options={TIME_WINDOW_OPTIONS}
-          onChange={(value) => setTimeWindow(String(value))}
-          triggerProps={{ popupStyle: { width: 180 } }}
-        />
-      </div>
+            <Select
+              addBefore="指标"
+              className={styles.dualAxisMultiSelect}
+              mode="multiple"
+              maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+              value={selectedMetrics}
+              options={METRIC_OPTIONS}
+              onChange={(value) => setSelectedMetrics(normalizeMetricSelection(value as string[] | string))}
+              triggerProps={{ popupStyle: { width: 320 } }}
+            />
+            <Select
+              addBefore="计费单元"
+              className={styles.dualAxisMultiSelect}
+              mode="multiple"
+              maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+              value={selectedBillingUnits}
+              options={finalBillingUnitOptions}
+              onChange={(value) =>
+                setSelectedBillingUnits(
+                  normalizeSelectionWithAll(value as string[] | string, BILLING_UNIT_OPTIONS, selectedBillingUnits),
+                )
+              }
+              triggerProps={{ popupStyle: { width: 280 } }}
+            />
+            <Select
+              addBefore="大区"
+              className={styles.dualAxisMultiSelect}
+              mode="multiple"
+              maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+              value={selectedRegions}
+              options={finalRegionOptions}
+              onChange={(value) =>
+                setSelectedRegions(
+                  normalizeSelectionWithAll(value as string[] | string, REGION_OPTIONS, selectedRegions),
+                )
+              }
+              triggerProps={{ popupStyle: { width: 180 } }}
+            />
+            <Select
+              addBefore="时间"
+              value={timeWindow}
+              options={TIME_WINDOW_OPTIONS}
+              onChange={(value) => setTimeWindow(String(value))}
+              triggerProps={{ popupStyle: { width: 180 } }}
+            />
+            <Radio.Group value={viewMode} type="button" onChange={(value) => setViewMode(value as FinalViewMode)}>
+              <Radio value="single">单图总览</Radio>
+              <Radio value="multiple">多图拆分</Radio>
+            </Radio.Group>
+          </div>
 
-      {isSplitByMetric ? (
-        <div className={styles.dualAxisFacetsGrid}>
-          {splitChartItems.map(({ metric, spec }) => {
-            if (draggingMetricKey === metric.key) {
-              return (
-                <div
-                  key={metric.key}
-                  className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel} ${styles.dualAxisDragPlaceholder}`}
-                  data-scheme-four-metric-key={metric.key}
-                />
-              );
-            }
+          {isMultipleMode ? (
+            <div className={styles.dualAxisFacetsGrid}>
+              {splitChartItems.map(({ metric, spec }) => {
+                if (draggingMetricKey === metric.key) {
+                  return (
+                    <div
+                      key={metric.key}
+                      className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel} ${styles.dualAxisDragPlaceholder}`}
+                      data-scheme-four-metric-key={metric.key}
+                    />
+                  );
+                }
 
-            return (
-              <Card
-                key={metric.key}
-                className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel}`}
-                data-scheme-four-metric-key={metric.key}
-              >
-                <div
-                  className={`${styles.focusHeader} ${styles.dualAxisDragHeader}`}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    handleFacetDragStart(metric.key, event);
+                return (
+                  <Card
+                    key={metric.key}
+                    className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel}`}
+                    data-scheme-four-metric-key={metric.key}
+                  >
+                    <div
+                      className={`${styles.focusHeader} ${styles.dualAxisDragHeader}`}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        handleFacetDragStart(metric.key, event);
+                      }}
+                    >
+                      <div className={styles.chartTitleBlock}>
+                        <div className={`${styles.chartTitle} ${styles.dualAxisDragTitle}`}>
+                          <span className={styles.dualAxisDragHandle} aria-hidden="true" />
+                          {metric.name}
+                          <span className={styles.chartTitleUnit}>（{getMetricTitleDisplayUnit(metric)}）</span>
+                        </div>
+                      </div>
+                      <LineKindLegend />
+                    </div>
+
+                    <VChart
+                      spec={spec}
+                      className={styles.dualAxisFacetChart}
+                      style={{ height: 230 }}
+                      onReady={(chart) => {
+                        splitChartRefs.current[metric.key] = chart;
+                      }}
+                      onLegendItemHover={handleLegendItemHover}
+                      onLegendItemUnHover={hideLegendFocusTooltip}
+                      onDimensionHover={handleSplitDimensionHover}
+                      onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
+                      onPointerLeave={() => {
+                        hideLegendFocusTooltip();
+                        if (!lockedTooltip) {
+                          clearLockedTooltip();
+                        }
+                      }}
+                      onError={(error) => Message.error(`最终方案 ${metric.name} 趋势图加载失败：${error.message}`)}
+                    />
+                  </Card>
+                );
+              })}
+              {dragPreview && dragPreviewItem && (
+                <Card
+                  className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel} ${styles.dualAxisDragPreview}`}
+                  style={{
+                    width: dragPreview.width,
+                    height: dragPreview.height,
+                    transform: `translate3d(${dragPreview.x}px, ${dragPreview.y}px, 0)`,
                   }}
                 >
-                  <div className={styles.chartTitleBlock}>
-                    <div className={`${styles.chartTitle} ${styles.dualAxisDragTitle}`}>
-                      <span className={styles.dualAxisDragHandle} aria-hidden="true" />
-                      {metric.name}（{getMetricDisplayUnit(metric)}）
+                  <div className={`${styles.focusHeader} ${styles.dualAxisDragHeader}`}>
+                    <div className={styles.chartTitleBlock}>
+                      <div className={`${styles.chartTitle} ${styles.dualAxisDragTitle}`}>
+                        <span className={styles.dualAxisDragHandle} aria-hidden="true" />
+                        {dragPreviewItem.metric.name}
+                        <span className={styles.chartTitleUnit}>
+                          （{getMetricTitleDisplayUnit(dragPreviewItem.metric)}）
+                        </span>
+                      </div>
                     </div>
+                    <LineKindLegend />
                   </div>
-                  <LineKindLegend />
-                </div>
 
-                <VChart
-                  spec={spec}
-                  className={styles.dualAxisFacetChart}
-                  style={{ height: 230 }}
-                  onReady={(chart) => {
-                    splitChartRefs.current[metric.key] = chart;
-                  }}
-                  onDimensionHover={handleSplitDimensionHover}
-                  onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
-                  onPointerLeave={() => {
-                    if (!lockedTooltip) {
-                      clearLockedTooltip();
+                  <VChart
+                    spec={dragPreviewItem.spec}
+                    className={styles.dualAxisFacetChart}
+                    style={{ height: 230 }}
+                    onError={(error) =>
+                      Message.error(`最终方案 ${dragPreviewItem.metric.name} 趋势图加载失败：${error.message}`)
                     }
-                  }}
-                  onError={(error) => Message.error(`方案四 ${metric.name} 趋势图加载失败：${error.message}`)}
-                />
-              </Card>
-            );
-          })}
-          {dragPreview && dragPreviewItem && (
-            <Card
-              className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel} ${styles.dualAxisDragPreview}`}
-              style={{
-                width: dragPreview.width,
-                height: dragPreview.height,
-                transform: `translate3d(${dragPreview.x}px, ${dragPreview.y}px, 0)`,
-              }}
-            >
-              <div className={`${styles.focusHeader} ${styles.dualAxisDragHeader}`}>
+                  />
+                </Card>
+              )}
+            </div>
+          ) : (
+            <Card className={styles.dualAxisPanel}>
+              <div className={styles.focusHeader}>
                 <div className={styles.chartTitleBlock}>
-                  <div className={`${styles.chartTitle} ${styles.dualAxisDragTitle}`}>
-                    <span className={styles.dualAxisDragHandle} aria-hidden="true" />
-                    {dragPreviewItem.metric.name}（{getMetricDisplayUnit(dragPreviewItem.metric)}）
-                  </div>
+                  <div className={styles.chartTitle}>指标实际/目标趋势图</div>
                 </div>
                 <LineKindLegend />
               </div>
 
               <VChart
-                spec={dragPreviewItem.spec}
-                className={styles.dualAxisFacetChart}
-                style={{ height: 230 }}
-                onError={(error) =>
-                  Message.error(`方案四 ${dragPreviewItem.metric.name} 趋势图加载失败：${error.message}`)
-                }
+                spec={overviewSpec}
+                className={styles.dualAxisChart}
+                style={{ height: 276 }}
+                onReady={(chart) => {
+                  overviewChartRef.current = chart;
+                }}
+                onLegendItemHover={handleLegendItemHover}
+                onLegendItemUnHover={hideLegendFocusTooltip}
+                onLegendSelectedDataChange={handleOverviewLegendSelectedDataChange}
+                onPointerLeave={hideLegendFocusTooltip}
+                onError={(error) => Message.error(`最终方案趋势图加载失败：${error.message}`)}
               />
             </Card>
           )}
+      {legendFocusTooltip && (
+        <div
+          className={styles.legendFocusTooltip}
+          style={{ left: legendFocusTooltip.x, top: legendFocusTooltip.y }}
+        >
+          点击仅展示该数据
         </div>
-      ) : (
-        <Card className={styles.dualAxisPanel}>
-          <div className={styles.focusHeader}>
-            <div className={styles.chartTitleBlock}>
-              <div className={styles.chartTitle}>指标实际/目标趋势图</div>
-            </div>
-            <LineKindLegend />
-          </div>
-
-          <VChart
-            spec={overviewSpec}
-            className={styles.dualAxisChart}
-            style={{ height: 276 }}
-            onError={(error) => Message.error(`方案四趋势图加载失败：${error.message}`)}
-          />
-        </Card>
       )}
     </div>
   );
@@ -1834,7 +2405,8 @@ const TargetTrendChartSchemes: React.FC = () => {
           <Tabs.TabPane key="facets" title="方案一：网格分面" />
           <Tabs.TabPane key="focus" title="方案二：折线下钻" />
           <Tabs.TabPane key="dualAxis" title="方案三：双轴总览" />
-          <Tabs.TabPane key="dualAxisFacets" title="方案四：双轴分面" />
+          <Tabs.TabPane key="dualAxisTable" title="方案四：双轴总览（表格 Tooltip）" />
+          <Tabs.TabPane key="dualAxisFacets" title="最终方案" />
         </Tabs>
 
         {activeScheme === 'facets' ? (
@@ -1887,6 +2459,8 @@ const TargetTrendChartSchemes: React.FC = () => {
           </div>
         ) : activeScheme === 'dualAxis' ? (
           <SchemeThreeChart />
+        ) : activeScheme === 'dualAxisTable' ? (
+          <SchemeThreeChart tooltipMode="table" errorLabel="方案四" />
         ) : (
           <SchemeFourChart />
         )}

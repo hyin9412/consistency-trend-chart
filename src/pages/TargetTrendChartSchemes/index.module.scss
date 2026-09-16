@@ -236,7 +236,7 @@
 }
 
 .legendLine {
-  width: 20px;
+  width: 12px;
   height: 0;
   flex: 0 0 auto;
   border-top: 2px solid #a9aeb8;
@@ -358,7 +358,7 @@
 
 .dualAxisOuterToolbar {
   display: grid;
-  grid-template-columns: minmax(285px, 1fr) minmax(285px, 1fr) minmax(220px, 280px) minmax(180px, 220px);
+  grid-template-columns: minmax(285px, 1fr) minmax(285px, 1fr) minmax(220px, 280px) minmax(180px, 220px) max-content;
   gap: 12px;
   align-items: center;
 }
@@ -385,11 +385,40 @@
   overflow: hidden;
 }
 
+.finalSelectAllOptionChecked,
+.finalSelectAllOptionIndeterminate {
+  display: inline-flex;
+  align-items: center;
+}
+
+:global(.arco-select-option-wrapper):has(.finalSelectAllOptionChecked) :global(.arco-checkbox-mask),
+:global(.arco-volc3-select-option-wrapper):has(.finalSelectAllOptionChecked) :global(.arco-volc3-checkbox-mask),
+:global(.arco-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-checkbox-mask),
+:global(.arco-volc3-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-volc3-checkbox-mask) {
+  border-color: transparent;
+  background-color: rgb(var(--primary-6));
+}
+
+:global(.arco-select-option-wrapper):has(.finalSelectAllOptionChecked) :global(.arco-checkbox-mask-icon),
+:global(.arco-volc3-select-option-wrapper):has(.finalSelectAllOptionChecked) :global(.arco-volc3-checkbox-mask-icon) {
+  transform: scale(1);
+}
+
+:global(.arco-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-checkbox-mask-icon),
+:global(.arco-volc3-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-volc3-checkbox-mask-icon) {
+  transform: scale(0);
+}
+
+:global(.arco-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-checkbox-mask)::after,
+:global(.arco-volc3-select-option-wrapper):has(.finalSelectAllOptionIndeterminate) :global(.arco-volc3-checkbox-mask)::after {
+  transform: translateX(-50%) translateY(-50%) scale(1);
+}
+
 .dualAxisPanel {
   box-sizing: border-box;
   height: 352px;
   min-width: 0;
-  padding: 20px 24px 16px;
+  padding: 16px;
   border: 1px solid var(--color-border-2);
   border-radius: 4px;
   background: #fff;
@@ -423,9 +452,15 @@
   align-items: center;
 }
 
+.chartTitleUnit {
+  color: var(--color-text-3);
+  font-weight: 400;
+}
+
 .dualAxisDragHandle {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-self: center;
   width: 0;
   height: 14px;
   flex: 0 0 auto;
@@ -439,12 +474,13 @@
 
 .dualAxisDragHandle::before {
   position: absolute;
-  top: 2px;
+  top: 50%;
   left: 2px;
   width: 2px;
   height: 2px;
   border-radius: 50%;
   background: var(--color-text-3);
+  transform: translateY(-5px);
   box-shadow:
     0 4px 0 var(--color-text-3),
     0 8px 0 var(--color-text-3),
@@ -522,6 +558,21 @@
   min-height: 230px;
   margin-top: 16px;
   background: #fff;
+}
+
+.legendFocusTooltip {
+  position: fixed;
+  z-index: 1100;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(29, 33, 41, 0.12);
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 20px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .dualAxisChart :global(canvas),
