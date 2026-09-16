@@ -1182,9 +1182,7 @@ const buildSingleAxisMetricLineSpec = (
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
   const axisRange = getDynamicAxisRange(data, axisValueType);
-  const legendItems = Array.from(
-    new Map(data.map((item) => [getComboMetricGroupLabel(item), item.color])).entries(),
-  ).map(([name, color]) => ({
+  const legendItems = Array.from(new Map(data.map((item) => [item.combo, item.color])).entries()).map(([name, color]) => ({
     name,
     color,
   }));
@@ -1269,7 +1267,7 @@ const buildSingleAxisMetricLineSpec = (
         colorText2,
         colorText3,
         legendItems,
-        'comboMetricGroup',
+        'combo',
         undefined,
         showLegendFocusIcon,
         legendFocusIconColor,
