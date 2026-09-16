@@ -851,6 +851,8 @@ const buildSingleAxisMetricLineSpec = (
     legends: [buildDualAxisLegendSpec(colorText2, colorText3, legendItems, 'combo')],
     tooltip: {
       renderMode: 'html',
+      confine: true,
+      enterable: true,
       updateElement: tooltipMaxHeight
         ? (tooltipElement: HTMLElement) => applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight)
         : undefined,
@@ -1439,18 +1441,40 @@ function SchemeFourChart() {
       chart?.setDimensionIndex(null as any, { tooltip: false, crosshair: true });
     });
   }, []);
+  const syncSplitTooltip = useCallback(
+    (period: string) => {
+      orderedSelectedMetrics.forEach((metricKey) => {
+        splitChartRefs.current[metricKey]?.setDimensionIndex(period, {
+          tooltip: true,
+          crosshair: true,
+          showTooltipOption: { activeType: 'dimension', alwaysShow: true },
+        });
+      });
+    },
+    [orderedSelectedMetrics],
+  );
   const handleSplitDimensionClick = useCallback((metricKey: MetricKey, event: any) => {
     const period = event?.dimensionInfo?.[0]?.value;
     if (!period) return;
 
     const nextPeriod = String(period);
     setLockedTooltip({ metricKey, period: nextPeriod });
-    splitChartRefs.current[metricKey]?.setDimensionIndex(nextPeriod, {
-      tooltip: true,
-      crosshair: true,
-      showTooltipOption: { activeType: 'dimension', alwaysShow: true },
-    });
-  }, []);
+    syncSplitTooltip(nextPeriod);
+  }, [syncSplitTooltip]);
+  const handleSplitDimensionHover = useCallback(
+    (event: any) => {
+      if (lockedTooltip) return;
+
+      const period = event?.dimensionInfo?.[0]?.value;
+      if (event?.action === 'leave' || !period) {
+        clearLockedTooltip();
+        return;
+      }
+
+      syncSplitTooltip(String(period));
+    },
+    [clearLockedTooltip, lockedTooltip, syncSplitTooltip],
+  );
   const moveFacetChart = useCallback((sourceMetricKey: MetricKey, event: any) => {
     const point = getClientPointFromVChartEvent(event);
     draggingMetricKeyRef.current = null;
@@ -1668,7 +1692,13 @@ function SchemeFourChart() {
                   onReady={(chart) => {
                     splitChartRefs.current[metric.key] = chart;
                   }}
+                  onDimensionHover={handleSplitDimensionHover}
                   onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
+                  onPointerLeave={() => {
+                    if (!lockedTooltip) {
+                      clearLockedTooltip();
+                    }
+                  }}
                   onError={(error) => Message.error(`方案四 ${metric.name} 趋势图加载失败：${error.message}`)}
                 />
               </Card>
