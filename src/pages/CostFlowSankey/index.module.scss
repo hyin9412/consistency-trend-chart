@@ -1,0 +1,102 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 32px 24px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.filters :global(.arco-select),
+.filters :global(.arco-select-wrapper) {
+  width: 285px;
+}
+
+.chartCard {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.chartCard :global(.arco-card-body),
+.chartCard :global(.arco-volc3-card-body) {
+  padding: 20px 24px 16px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionTitle {
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.helperText {
+  margin-top: 4px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.chartWrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  overflow: auto;
+}
+
+.sankeyChart {
+  width: 1176px;
+  height: 360px;
+  flex: 0 0 auto;
+  background: #fff;
+}
+
+.sankeyChart :global(canvas),
+.sankeyChart :global(div) {
+  background-color: #fff !important;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 16px;
+  }
+
+  .filters,
+  .filters :global(.arco-select),
+  .filters :global(.arco-select-wrapper) {
+    width: 100%;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+  }
+}

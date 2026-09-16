@@ -12,7 +12,11 @@ export enum MenuKey {
   ConfigDemo = 'config-demo',
   ModalDrawer = 'modal-drawer',
   VChartLineDemo = 'vchart-line-demo',
+  VChartNewLineDemo = 'vchart-new-line-demo',
   CloudEChartLineDemo = 'cloud-echart-line-demo',
+  PricingResultDetail = 'pricing-result-detail',
+  TargetTrendChartSchemes = 'target-trend-chart-schemes',
+  CostFlowSankey = 'cost-flow-sankey',
 }
 
 export interface MenuItem {
@@ -46,13 +50,17 @@ export const menuConfig: MenuGroup[] = [
       { key: MenuKey.DetailDemo, title: '详情页', route: '/detail-demo', hidden: true },
       { key: MenuKey.ConfigDemo, title: '配置页', route: '/config-demo', hidden: true },
       { key: MenuKey.ModalDrawer, title: '弹窗与抽屉', route: '/modal-drawer', hidden: true },
-      { key: MenuKey.VChartLineDemo, title: 'VChart 折线图', route: '/vchart-line-demo' },
+      { key: MenuKey.VChartLineDemo, title: 'VChart 折线图', route: '/vchart-line-demo', hidden: true },
+      { key: MenuKey.VChartNewLineDemo, title: '新建折线图', route: '/vchart-new-line-demo', hidden: true },
       {
         key: MenuKey.CloudEChartLineDemo,
         title: 'CloudEChart 折线图',
         route: '/cloud-echart-line-demo',
         hidden: true,
       },
+      { key: MenuKey.PricingResultDetail, title: '定价结果详情', route: '/pricing-result-detail', hidden: true },
+      { key: MenuKey.TargetTrendChartSchemes, title: '目标趋势图方案', route: '/target-trend-chart-schemes' },
+      { key: MenuKey.CostFlowSankey, title: '成本流向桑基图', route: '/cost-flow-sankey' },
     ],
   },
 ];

@@ -1,0 +1,659 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 32px 24px;
+}
+
+.schemeStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ruleCard,
+.chartCard,
+.focusPanel,
+.sidePanel {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-2);
+}
+
+.ruleCard :global(.arco-card-body),
+.ruleCard :global(.arco-volc3-card-body) {
+  padding: 16px 20px;
+}
+
+.focusPanel :global(.arco-card-body),
+.focusPanel :global(.arco-volc3-card-body),
+.sidePanel :global(.arco-card-body),
+.sidePanel :global(.arco-volc3-card-body) {
+  height: 100%;
+  padding: 20px 24px 16px;
+}
+
+.ruleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.ruleTitle {
+  color: var(--color-text-1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.ruleText {
+  margin-top: 4px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.compactRuleText {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.facetsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.facetsGrid .chartCard,
+.facetsGrid .chart {
+  background: #fff !important;
+}
+
+.facetsGrid .chart :global(canvas),
+.facetsGrid .chart :global(div) {
+  background-color: #fff !important;
+}
+
+.chartCard {
+  min-width: 0;
+  padding: 20px 24px 16px;
+}
+
+.chartCardDrilled {
+  border-color: rgba(22, 100, 255, 0.36);
+}
+
+.chartHeader,
+.focusHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chartTitleBlock {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chartTitleRow {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 16px;
+}
+
+.chartTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chartMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 4px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.metricSnapshot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 4px;
+  background: var(--color-bg-1);
+}
+
+.snapshotLabel {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.snapshotValue,
+.snapshotTarget {
+  margin-top: 2px;
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: 0;
+}
+
+.snapshotValue {
+  color: var(--color-text-1);
+}
+
+.snapshotTarget {
+  color: var(--color-text-2);
+}
+
+.chart {
+  width: 100%;
+  min-height: 260px;
+  margin-top: 16px;
+}
+
+.focusChart {
+  width: 100%;
+  min-height: 360px;
+  margin-top: 16px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-height: 28px;
+  margin-top: 8px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.legendItem span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendMarker {
+  width: 12px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 99px;
+}
+
+.legendSquare {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+}
+
+.legendMarkerDashed {
+  height: 0;
+  border-top: 2px dashed #a9aeb8;
+  background: transparent;
+}
+
+.legendLine {
+  width: 20px;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: 2px solid #a9aeb8;
+}
+
+.legendLineDashed {
+  border-top-style: dashed;
+}
+
+.focusLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.focusWorkspace {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.focusSidebar {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.focusHeaderActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.lineKindLegend {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebarTitle {
+  color: var(--color-text-1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.sidebarMetricList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sidebarMetricItem {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--color-text-2);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebarMetricItem:hover,
+.sidebarMetricItemActive {
+  border-color: rgba(22, 100, 255, 0.46);
+  background: rgba(22, 100, 255, 0.04);
+}
+
+.sidebarMetricName {
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebarMetricMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.sidebarMetricMeta span:first-child {
+  color: var(--color-text-2);
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-weight: 600;
+}
+
+.sidebarMetricMeta span:last-child {
+  color: rgb(var(--primary-6));
+  font-weight: 500;
+}
+
+.focusPanel {
+  min-width: 0;
+  background: #fff;
+}
+
+.dualAxisOuterToolbar {
+  display: grid;
+  grid-template-columns: minmax(285px, 1fr) minmax(285px, 1fr) minmax(220px, 280px) minmax(180px, 220px);
+  gap: 12px;
+  align-items: center;
+}
+
+.dualAxisOuterToolbar :global(.arco-select),
+.dualAxisOuterToolbar :global(.arco-volc3-select) {
+  width: 100%;
+}
+
+.dualAxisMetricSelect :global(.arco-select-view),
+.dualAxisMetricSelect :global(.arco-volc3-select-view),
+.dualAxisMetricSelect :global(.arco-input-tag),
+.dualAxisMetricSelect :global(.arco-volc3-input-tag) {
+  min-height: 32px;
+  max-height: 32px;
+  overflow: hidden;
+}
+
+.dualAxisMetricSelect :global(.arco-select-view-inner),
+.dualAxisMetricSelect :global(.arco-volc3-select-view-inner),
+.dualAxisMetricSelect :global(.arco-input-tag-inner),
+.dualAxisMetricSelect :global(.arco-volc3-input-tag-inner) {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.dualAxisPanel {
+  box-sizing: border-box;
+  height: 352px;
+  min-width: 0;
+  padding: 20px 24px 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.dualAxisPanel :global(.arco-card-body),
+.dualAxisPanel :global(.arco-volc3-card-body) {
+  padding: 0;
+}
+
+.dualAxisDraggablePanel {
+  height: 300px;
+  padding: 16px;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.dualAxisDraggablePanel:hover {
+  box-shadow: 0 4px 14px rgba(29, 33, 41, 0.08);
+}
+
+.dualAxisDragHeader {
+  cursor: move;
+  user-select: none;
+}
+
+.dualAxisDragTitle {
+  display: inline-flex;
+  align-items: center;
+}
+
+.dualAxisDragHandle {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-right: 0;
+  opacity: 0;
+  transition:
+    width 0.16s ease,
+    margin-right 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.dualAxisDragHandle::before {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--color-text-3);
+  box-shadow:
+    0 4px 0 var(--color-text-3),
+    0 8px 0 var(--color-text-3),
+    4px 0 0 var(--color-text-3),
+    4px 4px 0 var(--color-text-3),
+    4px 8px 0 var(--color-text-3);
+  content: '';
+}
+
+.dualAxisDraggablePanel .dualAxisDragHandle,
+.dualAxisDragHeader:hover .dualAxisDragHandle,
+.dualAxisDraggingPanel .dualAxisDragHandle {
+  width: 10px;
+  margin-right: 8px;
+  opacity: 1;
+}
+
+.dualAxisDraggingPanel {
+  border-color: #1664ff;
+  box-shadow: 0 4px 14px rgba(22, 100, 255, 0.16);
+}
+
+.dualAxisDragPreview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  border-color: #1664ff;
+  box-shadow: 0 8px 24px rgba(22, 100, 255, 0.18);
+  pointer-events: none;
+}
+
+.dualAxisDragPreview .dualAxisDragHandle {
+  width: 10px;
+  margin-right: 8px;
+  opacity: 1;
+}
+
+.dualAxisDragPlaceholder {
+  position: relative;
+  border-color: transparent;
+  background: rgb(var(--link-1));
+  box-shadow: none;
+}
+
+.dualAxisDragPlaceholder::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, #a2c1ff 0 4px, transparent 4px 8px) top left / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, #a2c1ff 0 4px, transparent 4px 8px) bottom left / 100% 1px no-repeat,
+    repeating-linear-gradient(180deg, #a2c1ff 0 4px, transparent 4px 8px) top left / 1px 100% no-repeat,
+    repeating-linear-gradient(180deg, #a2c1ff 0 4px, transparent 4px 8px) top right / 1px 100% no-repeat;
+  content: '';
+  pointer-events: none;
+}
+
+.dualAxisFacetsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.dualAxisChart {
+  width: 100%;
+  min-height: 276px;
+  margin-top: 16px;
+  background: #fff;
+}
+
+.dualAxisFacetChart {
+  width: 100%;
+  min-height: 230px;
+  margin-top: 16px;
+  background: #fff;
+}
+
+.dualAxisChart :global(canvas),
+.dualAxisChart :global(div),
+.dualAxisFacetChart :global(canvas),
+.dualAxisFacetChart :global(div) {
+  background-color: #fff !important;
+}
+
+.focusPanel .focusChart,
+.focusPanel .focusChart :global(canvas),
+.focusPanel .focusChart :global(div) {
+  background-color: #fff !important;
+}
+
+.focusPanel .chartCard {
+  margin-top: 16px;
+  border: none;
+  background: var(--color-bg-1);
+}
+
+.focusPanel .chartCard :global(.arco-card-body),
+.focusPanel .chartCard :global(.arco-volc3-card-body) {
+  padding: 16px;
+}
+
+.metricSelect {
+  width: 220px;
+  flex: 0 0 auto;
+}
+
+.metricList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.metricListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-1);
+  color: var(--color-text-2);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.metricListItem:hover,
+.metricListItemActive {
+  border-color: rgba(22, 100, 255, 0.46);
+  color: rgb(var(--primary-6));
+}
+
+.metricListItem span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricListItem span:last-child {
+  flex: 0 0 auto;
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-weight: 600;
+}
+
+@media (max-width: 1280px) {
+  .facetsGrid,
+  .dualAxisFacetsGrid,
+  .ruleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .focusWorkspace {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .dualAxisOuterToolbar {
+    grid-template-columns: repeat(2, minmax(285px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .content {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .chartHeader,
+  .focusHeader,
+  .metricSnapshot {
+    grid-template-columns: 1fr;
+  }
+
+  .chartHeader,
+  .focusHeader {
+    flex-direction: column;
+  }
+
+  .chartTitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  .metricSelect {
+    width: 100%;
+  }
+
+  .focusWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .dualAxisOuterToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .focusSidebar {
+    padding: 12px;
+  }
+
+  .sidebarMetricList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

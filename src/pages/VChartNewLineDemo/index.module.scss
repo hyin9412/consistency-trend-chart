@@ -1,0 +1,94 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 32px 24px;
+}
+
+.chartCard {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-2);
+}
+
+.chartCard :global(.arco-card-body),
+.chartCard :global(.arco-volc3-card-body) {
+  padding: 20px 24px 16px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chartTitle {
+  color: var(--color-text-1);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.helperText {
+  margin-top: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.chartStage {
+  min-height: 360px;
+  margin-top: 16px;
+  padding: 0;
+}
+
+.chart {
+  width: 100%;
+  min-height: 360px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 12px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  padding: 0;
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.legendItemMuted {
+  opacity: 0.42;
+}
+
+.legendMarker {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 1.71px;
+}

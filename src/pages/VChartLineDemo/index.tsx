@@ -590,7 +590,7 @@ const VChartLineDemo: React.FC = () => {
             type: 'rect',
             width: 1,
             style: {
-              fill: '#C9CDD4',
+              fill: colorBorder2,
               lineWidth: 0,
               opacity: 1,
             },
@@ -608,7 +608,6 @@ const VChartLineDemo: React.FC = () => {
   );
 
   const componentRankingDropdownWidth = `${getMaxOptionLabelWidth(COMPONENT_RANKING_OPTIONS) + SELECT_DROPDOWN_HORIZONTAL_PADDING}px`;
-  const timeRangeDropdownWidth = `${getMaxOptionLabelWidth(TIME_RANGE_OPTIONS) + 68}px`;
   const legendCategories = orderedSeriesData.map((item) => item.category);
   const legendPages = useMemo(() => paginateLegendItems(legendCategories, legendRowsWidth), [legendCategories, legendRowsWidth]);
   const totalLegendPages = legendPages.length || 1;

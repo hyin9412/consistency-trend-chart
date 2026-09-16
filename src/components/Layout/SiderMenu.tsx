@@ -22,7 +22,7 @@ function findMenuKeyByPath(pathname: string): string | undefined {
 const SiderMenu: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([MenuKey.Home]);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([findMenuKeyByPath(pathname) ?? MenuKey.TargetTrendChartSchemes]);
   const [openKeys, setOpenKeys] = useState<string[]>([MenuGroupKey.Examples]);
 
   useEffect(() => {

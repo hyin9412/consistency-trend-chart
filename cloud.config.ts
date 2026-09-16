@@ -3,7 +3,7 @@ import ArcoWebpackPlugin from '@arco-plugins/webpack-react';
 
 module.exports = defineConfig(() => ({
   dev: {
-    port: 3099,
+    port: 5200,
   },
   build: {
     outputPath: 'build',

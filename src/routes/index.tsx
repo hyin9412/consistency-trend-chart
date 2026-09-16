@@ -11,7 +11,11 @@ const DetailDemo = lazy(() => import('pages/DetailDemo'));
 const ConfigDemo = lazy(() => import('pages/ConfigDemo'));
 const ModalDrawer = lazy(() => import('pages/ModalDrawer'));
 const VChartLineDemo = lazy(() => import('pages/VChartLineDemo'));
+const VChartNewLineDemo = lazy(() => import('pages/VChartNewLineDemo'));
 const CloudEChartLineDemo = lazy(() => import('pages/CloudEChartLineDemo'));
+const PricingResultDetail = lazy(() => import('pages/PricingResultDetail'));
+const TargetTrendChartSchemes = lazy(() => import('pages/TargetTrendChartSchemes'));
+const CostFlowSankey = lazy(() => import('pages/CostFlowSankey'));
 
 function LazyPage({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>;
@@ -22,7 +26,7 @@ export const routes: RouteObject[] = [
     path: '/',
     element: <BaseLayout />,
     children: [
-      { index: true, element: <Navigate to="/vchart-line-demo" replace /> },
+      { index: true, element: <Navigate to="/target-trend-chart-schemes" replace /> },
       { path: 'home', element: <Home /> },
       { path: 'tag-management', element: <LazyPage><TagManagement /></LazyPage> },
       { path: 'push-abnormal-dashboard', element: <LazyPage><PushAbnormalDashboard /></LazyPage> },
@@ -32,7 +36,11 @@ export const routes: RouteObject[] = [
       { path: 'config-demo', element: <LazyPage><ConfigDemo /></LazyPage> },
       { path: 'modal-drawer', element: <LazyPage><ModalDrawer /></LazyPage> },
       { path: 'vchart-line-demo', element: <LazyPage><VChartLineDemo /></LazyPage> },
+      { path: 'vchart-new-line-demo', element: <LazyPage><VChartNewLineDemo /></LazyPage> },
       { path: 'cloud-echart-line-demo', element: <LazyPage><CloudEChartLineDemo /></LazyPage> },
+      { path: 'pricing-result-detail', element: <LazyPage><PricingResultDetail /></LazyPage> },
+      { path: 'target-trend-chart-schemes', element: <LazyPage><TargetTrendChartSchemes /></LazyPage> },
+      { path: 'cost-flow-sankey', element: <LazyPage><CostFlowSankey /></LazyPage> },
     ],
   },
 ];

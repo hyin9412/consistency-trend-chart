@@ -1,0 +1,455 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-1);
+}
+
+.pageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg-1);
+}
+
+.headerDivider {
+  margin: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 32px 24px;
+}
+
+.globalTabs {
+  margin-top: 0;
+}
+
+.filterCard,
+.targetCard,
+.chartCard,
+.sideCard,
+.tableCard,
+.flowCard,
+.formulaCard {
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-2);
+}
+
+.filterCard :global(.arco-card-body),
+.filterCard :global(.arco-volc3-card-body) {
+  padding: 16px 20px;
+}
+
+.targetCard :global(.arco-card-body),
+.targetCard :global(.arco-volc3-card-body),
+.chartCard :global(.arco-card-body),
+.chartCard :global(.arco-volc3-card-body),
+.sideCard :global(.arco-card-body),
+.sideCard :global(.arco-volc3-card-body),
+.tableCard :global(.arco-card-body),
+.tableCard :global(.arco-volc3-card-body),
+.flowCard :global(.arco-card-body),
+.flowCard :global(.arco-volc3-card-body),
+.formulaCard :global(.arco-card-body),
+.formulaCard :global(.arco-volc3-card-body) {
+  height: 100%;
+  padding: 20px 24px;
+}
+
+.filterTopLine {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.metricSelector {
+  margin-top: 16px;
+}
+
+.selectorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--color-text-1);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.targetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.targetHeader,
+.cardHeader,
+.costNodeHeader,
+.stepHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeader {
+  margin-bottom: 16px;
+}
+
+.cardTitle,
+.sectionTitle {
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.sectionTitle {
+  position: relative;
+  padding-left: 11px;
+}
+
+.sectionTitle::before {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 3px;
+  height: 12px;
+  border-radius: 1px;
+  background: rgb(var(--primary-6));
+  content: '';
+}
+
+.helperText {
+  margin-top: 4px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.targetValues {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.valueLabel {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.metricValue,
+.targetValue,
+.totalCostValue,
+.stepValue {
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  color: var(--color-text-1);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.metricValue {
+  margin-top: 4px;
+  font-size: 28px;
+  line-height: 34px;
+}
+
+.targetValue {
+  margin-top: 4px;
+  color: var(--color-text-2);
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.progressTrack,
+.costTrack {
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-fill-2);
+}
+
+.progressTrack {
+  height: 6px;
+  margin-top: 18px;
+}
+
+.progressValue {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1664ff, #00a870);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.infoIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-3);
+}
+
+.analysisGrid,
+.formulaLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.trendChart {
+  width: 100%;
+  min-height: 360px;
+}
+
+.missList,
+.definitionList,
+.costBars,
+.formulaGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.missList {
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.missItem {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.missItem:last-child {
+  border-bottom: none;
+}
+
+.rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-fill-2);
+  color: var(--color-text-1);
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: center;
+}
+
+.missName {
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 12px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableCard {
+  min-width: 0;
+}
+
+.flowCard {
+  --cost-blue: #1664ff;
+  --cost-cyan: #14c9c9;
+  --cost-green: #00a870;
+  --cost-orange: #ff7d00;
+}
+
+.costFlow {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.totalCostBox {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  border: 1px solid rgba(22, 100, 255, 0.18);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(22, 100, 255, 0.08), rgba(0, 168, 112, 0.08));
+}
+
+.totalCostValue {
+  margin-top: 8px;
+  font-size: 32px;
+  line-height: 38px;
+}
+
+.costBars {
+  gap: 14px;
+  justify-content: center;
+}
+
+.costNode {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-1);
+}
+
+.costNodeHeader {
+  color: var(--color-text-1);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.costValue {
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.costTrack {
+  height: 8px;
+  margin-top: 10px;
+}
+
+.costFill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.definitionList {
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.definitionList div {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.definitionList div:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.definitionList span {
+  color: var(--color-text-1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.definitionList p {
+  margin: 6px 0 0;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.formulaGrid {
+  gap: 12px;
+}
+
+.formulaStep {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  background: var(--color-bg-1);
+}
+
+.stepIndex {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(22, 100, 255, 0.1);
+  color: rgb(var(--primary-6));
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 28px;
+  text-align: center;
+}
+
+.stepMain {
+  min-width: 0;
+}
+
+.stepHeader {
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.stepValue {
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 30px;
+}
+
+.stepValue span {
+  margin-left: 6px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.expression {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  font-family: Roboto, 'PingFang SC', sans-serif;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+@media (max-width: 1280px) {
+  .targetGrid,
+  .analysisGrid,
+  .formulaLayout,
+  .costFlow {
+    grid-template-columns: 1fr;
+  }
+
+  .totalCostBox {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .content {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .targetValues,
+  .missItem {
+    grid-template-columns: 1fr;
+  }
+}
