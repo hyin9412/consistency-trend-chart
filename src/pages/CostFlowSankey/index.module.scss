@@ -41,7 +41,7 @@
 
 .chartCard :global(.arco-card-body),
 .chartCard :global(.arco-volc3-card-body) {
-  padding: 20px 24px 16px;
+  padding: 0;
 }
 
 .cardHeader {
@@ -49,6 +49,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  padding: 0;
 }
 
 .sectionTitle {
@@ -58,25 +59,20 @@
   line-height: 24px;
 }
 
-.helperText {
-  margin-top: 4px;
-  color: var(--color-text-3);
-  font-size: 12px;
-  line-height: 20px;
-}
-
 .chartWrap {
   position: relative;
   display: flex;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: 16px;
+  padding: 0 24px;
   overflow: auto;
 }
 
 .sankeyChart {
-  width: 1176px;
+  width: 100%;
+  max-width: 1176px;
   height: 360px;
-  flex: 0 0 auto;
+  flex: 0 1 1176px;
   background: #fff;
 }
 

@@ -265,11 +265,12 @@ function buildSankeySpec(unit: string): ISankeyChartSpec {
     nodeGap: 24,
     nodeWidth: 14,
     minNodeHeight: 6,
+    crossNodeAlign: 'start',
     padding: {
-      top: 36,
-      right: 48,
-      bottom: 36,
-      left: 40,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
     },
     label: {
       visible: true,
@@ -439,7 +440,6 @@ const CostFlowSankey: React.FC = () => {
           <div className={styles.cardHeader}>
             <div>
               <div className={styles.sectionTitle}>成本流向</div>
-              <div className={styles.helperText}>与计费项目粒度一致，按计费单元、大区和账期聚合计算。</div>
             </div>
             <Tag.TagPro type="success">总成本 ${totalCost.toFixed(2)} 万</Tag.TagPro>
           </div>
@@ -447,7 +447,7 @@ const CostFlowSankey: React.FC = () => {
             <VChart
               spec={spec}
               className={styles.sankeyChart}
-              style={{ width: 1176, height: 360 }}
+              style={{ width: '100%', height: 360 }}
               onError={(error) => Message.error(`成本流向桑基图加载失败：${error.message}`)}
             />
           </div>

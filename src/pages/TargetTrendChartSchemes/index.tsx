@@ -174,6 +174,22 @@ const formatCnyValue = (value: number) => {
 
 const getMetricAxisValueType = (metric: MetricConfig): AxisValueType => (metric.unit === '%' ? 'rate' : 'price');
 
+const getDynamicAxisRange = (data: DualAxisTrendDatum[], axisValueType: AxisValueType) => {
+  const values = data.map((item) => item.value).filter((value) => Number.isFinite(value));
+  if (!values.length) return {};
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const span = maxValue - minValue;
+  const fallbackPadding = axisValueType === 'rate' ? 1 : Math.max(Math.abs(maxValue) * 0.08, 0.01);
+  const padding = span > 0 ? span * 0.12 : fallbackPadding;
+
+  return {
+    min: Math.max(0, minValue - padding),
+    max: maxValue + padding,
+  };
+};
+
 const getMetricDisplayUnit = (metric: MetricConfig) => {
   if (metric.unit === '%') return '%';
   return metric.unit.replace('美元', '人民币');
@@ -615,6 +631,15 @@ const buildDualAxisLineSeriesSpec = (dataId: string, axisValueType: AxisValueTyp
     },
   } as any);
 
+const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: number) => {
+  tooltipElement.dataset.targetTrendScrollableTooltip = 'true';
+  tooltipElement.style.maxHeight = `${maxHeight}px`;
+  tooltipElement.style.overflowY = 'auto';
+  tooltipElement.style.overflowX = 'hidden';
+  tooltipElement.style.pointerEvents = 'auto';
+  tooltipElement.style.overscrollBehavior = 'contain';
+};
+
 const buildDualAxisLineSpec = (
   data: DualAxisTrendDatum[],
   colorText2: string,
@@ -626,6 +651,8 @@ const buildDualAxisLineSpec = (
 ): ICommonChartSpec => {
   const priceData = data.filter((item) => item.axisValueType === 'price');
   const rateData = data.filter((item) => item.axisValueType === 'rate');
+  const priceAxisRange = getDynamicAxisRange(priceData, 'price');
+  const rateAxisRange = getDynamicAxisRange(rateData, 'rate');
   const legendItems =
     legendMode === 'metric'
       ? METRICS.filter((metric) => data.some((item) => item.metric === metric.key)).map((metric) => ({
@@ -662,6 +689,8 @@ const buildDualAxisLineSpec = (
         id: 'priceAxis',
         type: 'linear',
         seriesId: ['priceSeries'],
+        min: priceAxisRange.min,
+        max: priceAxisRange.max,
         label: {
           visible: true,
           space: 4,
@@ -675,8 +704,8 @@ const buildDualAxisLineSpec = (
         orient: 'right',
         id: 'rateAxis',
         type: 'linear',
-        min: 0,
-        max: 120,
+        min: rateAxisRange.min,
+        max: rateAxisRange.max,
         seriesId: ['rateSeries'],
         label: {
           visible: true,
@@ -692,11 +721,7 @@ const buildDualAxisLineSpec = (
     tooltip: {
       renderMode: 'html',
       updateElement: tooltipMaxHeight
-        ? (tooltipElement: HTMLElement) => {
-            tooltipElement.style.maxHeight = `${tooltipMaxHeight}px`;
-            tooltipElement.style.overflowY = 'auto';
-            tooltipElement.style.overflowX = 'hidden';
-          }
+        ? (tooltipElement: HTMLElement) => applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight)
         : undefined,
       dimension: {
         shapeType: 'square',
@@ -744,8 +769,10 @@ const buildSingleAxisMetricLineSpec = (
   colorText2: string,
   colorText3: string,
   colorBorder2: string,
+  tooltipMaxHeight?: number,
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
+  const axisRange = getDynamicAxisRange(data, axisValueType);
   const legendItems = Array.from(new Map(data.map((item) => [item.combo, item.color])).entries()).map(([name, color]) => ({
     name,
     color,
@@ -806,8 +833,8 @@ const buildSingleAxisMetricLineSpec = (
       {
         orient: 'left',
         type: 'linear',
-        min: axisValueType === 'rate' ? 0 : undefined,
-        max: axisValueType === 'rate' ? 120 : undefined,
+        min: axisRange.min,
+        max: axisRange.max,
         label: {
           visible: true,
           space: 4,
@@ -824,6 +851,9 @@ const buildSingleAxisMetricLineSpec = (
     legends: [buildDualAxisLegendSpec(colorText2, colorText3, legendItems, 'combo')],
     tooltip: {
       renderMode: 'html',
+      updateElement: tooltipMaxHeight
+        ? (tooltipElement: HTMLElement) => applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight)
+        : undefined,
       dimension: {
         shapeType: 'square',
         shapeSize: 10,
@@ -1220,6 +1250,9 @@ function SchemeThreeChart() {
   const colorText2 = useMemo(() => getToken('--color-text-2', '#4E5969'), []);
   const colorText3 = useMemo(() => getToken('--color-text-3', '#86909C'), []);
   const colorBorder2 = useMemo(() => getToken('--color-border-2', '#EAEDF1'), []);
+  const chartRef = useRef<IVChart | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [lockedTooltipPeriod, setLockedTooltipPeriod] = useState<string | null>(null);
   const [selectedBillingUnits, setSelectedBillingUnits] = useState<string[]>(DEFAULT_BILLING_UNITS);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(DEFAULT_REGIONS);
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(DEFAULT_METRICS);
@@ -1234,9 +1267,51 @@ function SchemeThreeChart() {
     [selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
   );
   const spec = useMemo(
-    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'metric', true, 450),
+    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'metric', true, 438),
     [chartData, colorBorder2, colorText2, colorText3],
   );
+  const clearLockedTooltip = useCallback(() => {
+    setLockedTooltipPeriod(null);
+    chartRef.current?.hideTooltip();
+    chartRef.current?.setDimensionIndex(null as any, { tooltip: false, crosshair: true });
+  }, []);
+  const handleDimensionClick = useCallback((event: any) => {
+    const period = event?.dimensionInfo?.[0]?.value;
+    if (!period) return;
+
+    const nextPeriod = String(period);
+    setLockedTooltipPeriod(nextPeriod);
+    chartRef.current?.setDimensionIndex(nextPeriod, {
+      tooltip: true,
+      crosshair: true,
+      showTooltipOption: { activeType: 'dimension', alwaysShow: true },
+    });
+  }, []);
+
+  useEffect(() => {
+    clearLockedTooltip();
+  }, [clearLockedTooltip, selectedBillingUnits, selectedMetrics, selectedRegions, timeWindow]);
+
+  useEffect(() => {
+    if (!lockedTooltipPeriod) return;
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const isInsidePanel = Boolean(panelRef.current?.contains(target));
+      const isInsideTooltip = Boolean(target.closest('[data-target-trend-scrollable-tooltip="true"]'));
+      if (isInsidePanel || isInsideTooltip) return;
+
+      clearLockedTooltip();
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown);
+    };
+  }, [clearLockedTooltip, lockedTooltipPeriod]);
 
   return (
     <div className={styles.schemeStack}>
@@ -1247,7 +1322,7 @@ function SchemeThreeChart() {
       <div className={styles.dualAxisOuterToolbar}>
         <Select
           addBefore="指标"
-          className={styles.dualAxisMetricSelect}
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
           maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedMetrics}
@@ -1257,7 +1332,9 @@ function SchemeThreeChart() {
         />
         <Select
           addBefore="计费单元"
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedBillingUnits}
           options={BILLING_UNIT_OPTIONS}
           onChange={(value) => setSelectedBillingUnits(normalizeSelection(value as string[] | string))}
@@ -1265,7 +1342,9 @@ function SchemeThreeChart() {
         />
         <Select
           addBefore="大区"
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedRegions}
           options={REGION_OPTIONS}
           onChange={(value) => setSelectedRegions(normalizeSelection(value as string[] | string))}
@@ -1288,12 +1367,18 @@ function SchemeThreeChart() {
           <LineKindLegend />
         </div>
 
-        <VChart
-          spec={spec}
-          className={styles.dualAxisChart}
-          style={{ height: 276 }}
-          onError={(error) => Message.error(`方案三趋势图加载失败：${error.message}`)}
-        />
+        <div ref={panelRef}>
+          <VChart
+            spec={spec}
+            className={styles.dualAxisChart}
+            style={{ height: 276 }}
+            onReady={(chart) => {
+              chartRef.current = chart;
+            }}
+            onDimensionClick={handleDimensionClick}
+            onError={(error) => Message.error(`方案三趋势图加载失败：${error.message}`)}
+          />
+        </div>
       </Card>
     </div>
   );
@@ -1303,6 +1388,8 @@ function SchemeFourChart() {
   const colorText2 = useMemo(() => getToken('--color-text-2', '#4E5969'), []);
   const colorText3 = useMemo(() => getToken('--color-text-3', '#86909C'), []);
   const colorBorder2 = useMemo(() => getToken('--color-border-2', '#EAEDF1'), []);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const splitChartRefs = useRef<Partial<Record<MetricKey, IVChart>>>({});
   const [selectedBillingUnits, setSelectedBillingUnits] = useState<string[]>(DEFAULT_BILLING_UNITS);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(DEFAULT_REGIONS);
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(DEFAULT_METRICS);
@@ -1310,6 +1397,7 @@ function SchemeFourChart() {
   const [metricOrder, setMetricOrder] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [draggingMetricKey, setDraggingMetricKey] = useState<MetricKey | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
+  const [lockedTooltip, setLockedTooltip] = useState<{ metricKey: MetricKey; period: string } | null>(null);
   const draggingMetricKeyRef = useRef<MetricKey | null>(null);
 
   const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
@@ -1339,11 +1427,30 @@ function SchemeFourChart() {
         const metricData = chartData.filter((item) => item.metric === metric.key);
         return {
           metric,
-          spec: buildSingleAxisMetricLineSpec(metric, metricData, colorText2, colorText3, colorBorder2),
+          spec: buildSingleAxisMetricLineSpec(metric, metricData, colorText2, colorText3, colorBorder2, 438),
         };
       }),
     [chartData, colorBorder2, colorText2, colorText3, orderedSelectedMetrics],
   );
+  const clearLockedTooltip = useCallback(() => {
+    setLockedTooltip(null);
+    Object.values(splitChartRefs.current).forEach((chart) => {
+      chart?.hideTooltip();
+      chart?.setDimensionIndex(null as any, { tooltip: false, crosshair: true });
+    });
+  }, []);
+  const handleSplitDimensionClick = useCallback((metricKey: MetricKey, event: any) => {
+    const period = event?.dimensionInfo?.[0]?.value;
+    if (!period) return;
+
+    const nextPeriod = String(period);
+    setLockedTooltip({ metricKey, period: nextPeriod });
+    splitChartRefs.current[metricKey]?.setDimensionIndex(nextPeriod, {
+      tooltip: true,
+      crosshair: true,
+      showTooltipOption: { activeType: 'dimension', alwaysShow: true },
+    });
+  }, []);
   const moveFacetChart = useCallback((sourceMetricKey: MetricKey, event: any) => {
     const point = getClientPointFromVChartEvent(event);
     draggingMetricKeyRef.current = null;
@@ -1402,6 +1509,40 @@ function SchemeFourChart() {
   }, [selectedMetrics]);
 
   useEffect(() => {
+    const selectedMetricSet = new Set(selectedMetrics);
+    METRICS.forEach((metric) => {
+      if (!selectedMetricSet.has(metric.key)) {
+        delete splitChartRefs.current[metric.key];
+      }
+    });
+  }, [selectedMetrics]);
+
+  useEffect(() => {
+    clearLockedTooltip();
+  }, [clearLockedTooltip, isSplitByMetric, selectedBillingUnits, selectedMetrics, selectedRegions, timeWindow]);
+
+  useEffect(() => {
+    if (!lockedTooltip) return undefined;
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const isInsideContainer = Boolean(containerRef.current?.contains(target));
+      const isInsideTooltip = Boolean(target.closest('[data-target-trend-scrollable-tooltip="true"]'));
+      if (isInsideContainer || isInsideTooltip) return;
+
+      clearLockedTooltip();
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown);
+    };
+  }, [clearLockedTooltip, lockedTooltip]);
+
+  useEffect(() => {
     if (!draggingMetricKey) return undefined;
 
     const previousCursor = document.body.style.cursor;
@@ -1440,7 +1581,7 @@ function SchemeFourChart() {
   );
 
   return (
-    <div className={styles.schemeStack}>
+    <div className={styles.schemeStack} ref={containerRef}>
       <div className={styles.compactRuleText}>
         默认勾选多指标，单组合时按指标分色；多计费单元或多大区时按指标拆图，并展示计费单元 × 大区粒度。
       </div>
@@ -1448,7 +1589,7 @@ function SchemeFourChart() {
       <div className={styles.dualAxisOuterToolbar}>
         <Select
           addBefore="指标"
-          className={styles.dualAxisMetricSelect}
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
           maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedMetrics}
@@ -1458,7 +1599,9 @@ function SchemeFourChart() {
         />
         <Select
           addBefore="计费单元"
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedBillingUnits}
           options={BILLING_UNIT_OPTIONS}
           onChange={(value) => setSelectedBillingUnits(normalizeSelection(value as string[] | string))}
@@ -1466,7 +1609,9 @@ function SchemeFourChart() {
         />
         <Select
           addBefore="大区"
+          className={styles.dualAxisMultiSelect}
           mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
           value={selectedRegions}
           options={REGION_OPTIONS}
           onChange={(value) => setSelectedRegions(normalizeSelection(value as string[] | string))}
@@ -1520,6 +1665,10 @@ function SchemeFourChart() {
                   spec={spec}
                   className={styles.dualAxisFacetChart}
                   style={{ height: 230 }}
+                  onReady={(chart) => {
+                    splitChartRefs.current[metric.key] = chart;
+                  }}
+                  onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
                   onError={(error) => Message.error(`方案四 ${metric.name} 趋势图加载失败：${error.message}`)}
                 />
               </Card>

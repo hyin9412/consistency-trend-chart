@@ -368,19 +368,19 @@
   width: 100%;
 }
 
-.dualAxisMetricSelect :global(.arco-select-view),
-.dualAxisMetricSelect :global(.arco-volc3-select-view),
-.dualAxisMetricSelect :global(.arco-input-tag),
-.dualAxisMetricSelect :global(.arco-volc3-input-tag) {
+.dualAxisMultiSelect :global(.arco-select-view),
+.dualAxisMultiSelect :global(.arco-volc3-select-view),
+.dualAxisMultiSelect :global(.arco-input-tag),
+.dualAxisMultiSelect :global(.arco-volc3-input-tag) {
   min-height: 32px;
   max-height: 32px;
   overflow: hidden;
 }
 
-.dualAxisMetricSelect :global(.arco-select-view-inner),
-.dualAxisMetricSelect :global(.arco-volc3-select-view-inner),
-.dualAxisMetricSelect :global(.arco-input-tag-inner),
-.dualAxisMetricSelect :global(.arco-volc3-input-tag-inner) {
+.dualAxisMultiSelect :global(.arco-select-view-inner),
+.dualAxisMultiSelect :global(.arco-volc3-select-view-inner),
+.dualAxisMultiSelect :global(.arco-input-tag-inner),
+.dualAxisMultiSelect :global(.arco-volc3-input-tag-inner) {
   flex-wrap: nowrap;
   overflow: hidden;
 }
