@@ -6,7 +6,8 @@
   "description": "TOD Design Skill 快速启动包 — 预配物料库与页面框架，便于从零开始生成页面",
   "scripts": {
     "dev": "cloud-scripts dev",
-    "build": "cloud-scripts build"
+    "build": "cloud-scripts build",
+    "postbuild": "cp 404.html build/404.html && touch build/.nojekyll"
   },
   "dependencies": {
     "@arco-design/iconbox-react-ve-o-design": "^1.1.37",
