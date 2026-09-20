@@ -16,6 +16,7 @@ export enum MenuKey {
   CloudEChartLineDemo = 'cloud-echart-line-demo',
   PricingResultDetail = 'pricing-result-detail',
   TargetTrendChartSchemes = 'target-trend-chart-schemes',
+  OverviewTrendChart = 'overview-trend-chart',
   CostFlowSankey = 'cost-flow-sankey',
 }
 
@@ -60,6 +61,7 @@ export const menuConfig: MenuGroup[] = [
       },
       { key: MenuKey.PricingResultDetail, title: '定价结果详情', route: '/pricing-result-detail', hidden: true },
       { key: MenuKey.TargetTrendChartSchemes, title: '目标趋势图方案', route: '/target-trend-chart-schemes' },
+      { key: MenuKey.OverviewTrendChart, title: '总览趋势图', route: '/overview-trend-chart' },
       { key: MenuKey.CostFlowSankey, title: '成本流向桑基图', route: '/cost-flow-sankey' },
     ],
   },

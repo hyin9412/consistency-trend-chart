@@ -15,6 +15,7 @@ const VChartNewLineDemo = lazy(() => import('pages/VChartNewLineDemo'));
 const CloudEChartLineDemo = lazy(() => import('pages/CloudEChartLineDemo'));
 const PricingResultDetail = lazy(() => import('pages/PricingResultDetail'));
 const TargetTrendChartSchemes = lazy(() => import('pages/TargetTrendChartSchemes'));
+const OverviewTrendChart = lazy(() => import('pages/OverviewTrendChart'));
 const CostFlowSankey = lazy(() => import('pages/CostFlowSankey'));
 
 function LazyPage({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export const routes: RouteObject[] = [
       { path: 'cloud-echart-line-demo', element: <LazyPage><CloudEChartLineDemo /></LazyPage> },
       { path: 'pricing-result-detail', element: <LazyPage><PricingResultDetail /></LazyPage> },
       { path: 'target-trend-chart-schemes', element: <LazyPage><TargetTrendChartSchemes /></LazyPage> },
+      { path: 'overview-trend-chart', element: <LazyPage><OverviewTrendChart /></LazyPage> },
       { path: 'cost-flow-sankey', element: <LazyPage><CostFlowSankey /></LazyPage> },
     ],
   },
