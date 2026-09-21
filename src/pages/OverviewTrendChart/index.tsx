@@ -19,7 +19,7 @@ type LineKind = 'actual' | 'target';
 type AxisValueType = 'price' | 'rate';
 type FinalViewMode = 'single' | 'multiple';
 type ProductColorMode = 'metric' | 'product' | 'productMetric';
-type ProductLegendMode = 'product' | 'productMetricGroup' | 'productMetricLine' | 'productMetric';
+type ProductLegendMode = 'product' | 'productDimension' | 'productMetricGroup' | 'productMetricLine' | 'productMetric';
 
 interface MetricConfig {
   key: MetricKey;
@@ -43,6 +43,8 @@ interface ProductTrendDatum {
   metricName: string;
   productKey: string;
   product: string;
+  billingUnit?: string;
+  region?: string;
   lineKind: LineKind;
   series: string;
   value: number;
@@ -66,6 +68,11 @@ interface DragPreviewState {
   offsetY: number;
 }
 
+interface TooltipAlignmentConfig {
+  scope: string;
+  metricKey: MetricKey;
+}
+
 type LegendSpecWithPadding = IDiscreteLegendSpec & {
   padding?: [number, number, number, number];
 };
@@ -78,7 +85,18 @@ const TOOLTIP_BODY_FONT_SIZE = 12;
 const TOOLTIP_BODY_LINE_HEIGHT = 20;
 const TOOLTIP_BODY_FONT_WEIGHT = 400;
 const FINAL_SCHEME_TOOLTIP_MAX_HEIGHT = 420;
+const FINAL_SCHEME_SPLIT_TOOLTIP_MAX_HEIGHT = 264;
 const FINAL_SCHEME_TOOLTIP_MAX_WIDTH = 500;
+const TOOLTIP_ROW_ALIGNMENT_TOLERANCE = 8;
+const FINAL_HOVER_POINT_STYLE = {
+  size: 10,
+  symbolType: 'circle',
+  lineWidth: 2,
+  stroke: '#fff',
+  fillOpacity: 1,
+  strokeOpacity: 1,
+  lineDash: [0, 0],
+};
 const PRODUCT_CHART_COLOR_PALETTE = [
   '#1664FF',
   '#1AC6FF',
@@ -150,7 +168,28 @@ const PRODUCTS: ProductConfig[] = [
 const PRODUCT_NAMES = PRODUCTS.map((product) => product.name);
 const PRODUCT_OPTIONS = PRODUCTS.map((product) => ({ label: product.name, value: product.key }));
 const DEFAULT_PRODUCTS = PRODUCTS.map((product) => product.key);
-const TIME_WINDOW_OPTIONS = [{ label: '过去 6 个月', value: 'last6Months' }];
+const BILLING_UNIT_OPTIONS = [
+  { label: 'ByteGraph CPU', value: 'ByteGraph CPU' },
+  { label: 'bytegraph.mem', value: 'bytegraph.mem' },
+  { label: 'ByteGraph 存储', value: 'ByteGraph 存储' },
+];
+const REGION_OPTIONS = [
+  { label: 'cn', value: 'cn' },
+  { label: 'ap', value: 'ap' },
+  { label: 'sg', value: 'sg' },
+  { label: 'va', value: 'va' },
+];
+const DEFAULT_BILLING_UNITS = BILLING_UNIT_OPTIONS.map((option) => option.value);
+const DEFAULT_REGIONS = ['cn'];
+const LINE_KIND_OPTIONS = [
+  { label: '实际值', value: 'actual' },
+  { label: '目标值', value: 'target' },
+];
+const DEFAULT_LINE_KINDS: LineKind[] = ['actual'];
+const TIME_WINDOW_OPTIONS = [
+  { label: '2026-08', value: '2026-08' },
+  { label: '过去 6 个月', value: 'last6Months' },
+];
 
 const getToken = (name: string, fallback: string) => {
   if (typeof window === 'undefined') return fallback;
@@ -160,6 +199,11 @@ const getToken = (name: string, fallback: string) => {
 const normalizeMetricSelection = (value: string[] | string): MetricKey[] => {
   const values = Array.isArray(value) ? value : [value];
   return values.filter((key): key is MetricKey => METRICS.some((metric) => metric.key === key));
+};
+
+const normalizeLineKindSelection = (value: string[] | string): LineKind[] => {
+  const values = Array.isArray(value) ? value : [value];
+  return values.filter((key): key is LineKind => key === 'actual' || key === 'target');
 };
 
 const normalizeSelection = (value: string[] | string) => (Array.isArray(value) ? value : [value]);
@@ -264,9 +308,25 @@ const formatPeriodToDateGranularity = (value: string | string[]) => {
 };
 
 const getLineKindLabel = (lineKind: LineKind) => (lineKind === 'actual' ? '实际值' : '目标值');
+const getTooltipLineKindLabel = (lineKind: LineKind) => (lineKind === 'actual' ? '实际' : '目标');
 
-const getProductLineLabel = (datum: Pick<ProductTrendDatum, 'product' | 'lineKind'>) =>
-  `${datum.product}（${getLineKindLabel(datum.lineKind)}）`;
+const formatBillingUnitForChart = (billingUnit: string) =>
+  billingUnit
+    .replace(/^bytegraph[.\s-]*/i, '')
+    .trim();
+
+const getProductDimensionLabel = (
+  datum: Pick<ProductTrendDatum, 'product'> & Partial<Pick<ProductTrendDatum, 'billingUnit' | 'region'>>,
+) => {
+  const dimensionLabel =
+    datum.billingUnit && datum.region ? `${formatBillingUnitForChart(datum.billingUnit)}|${datum.region}` : '计费单元|大区';
+  return `${datum.product}, ${dimensionLabel}`;
+};
+
+const getProductLineLabel = (
+  datum: Pick<ProductTrendDatum, 'product' | 'lineKind'> &
+    Partial<Pick<ProductTrendDatum, 'billingUnit' | 'region'>>,
+) => `${getProductDimensionLabel(datum)}, ${getTooltipLineKindLabel(datum.lineKind)}`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -341,6 +401,8 @@ const asProductTrendDatum = (datum: Datum | undefined): ProductTrendDatum | unde
     metricName: String(datum.metricName),
     productKey: String(datum.productKey),
     product: datum.product,
+    billingUnit: typeof datum.billingUnit === 'string' ? datum.billingUnit : undefined,
+    region: typeof datum.region === 'string' ? datum.region : undefined,
     lineKind: datum.lineKind,
     series: String(datum.series),
     value: datum.value,
@@ -353,14 +415,26 @@ const asProductTrendDatum = (datum: Datum | undefined): ProductTrendDatum | unde
 const getProductFactor = (product: ProductConfig, periodIndex: number, metricIndex: number) =>
   1 + product.delta + Math.sin((periodIndex + 1) * (metricIndex + 1.4) + product.delta * 10) * 0.018;
 
-const getProductMetricLegendName = (datum: Pick<ProductTrendDatum, 'product' | 'metricName'>) =>
-  `${datum.product}, ${datum.metricName}`;
+const getBillingRegionFactor = (billingUnit: string, region: string, periodIndex: number) => {
+  const billingIndex = BILLING_UNIT_OPTIONS.findIndex((option) => option.value === billingUnit);
+  const regionIndex = REGION_OPTIONS.findIndex((option) => option.value === region);
+  return 1 + Math.max(billingIndex, 0) * 0.026 + Math.max(regionIndex, 0) * 0.018 + Math.sin((periodIndex + 1) * (billingIndex + 2)) * 0.01;
+};
 
-const getProductMetricGroupLabel = (datum: Pick<ProductTrendDatum, 'product' | 'metricName'>) =>
-  `[${datum.product}] ${datum.metricName}`;
+const getProductMetricLegendName = (
+  datum: Pick<ProductTrendDatum, 'product' | 'metricName'> &
+    Partial<Pick<ProductTrendDatum, 'billingUnit' | 'region'>>,
+) => `${getProductDimensionLabel(datum)}, ${datum.metricName}`;
 
-const getProductMetricLineLabel = (datum: Pick<ProductTrendDatum, 'product' | 'metricName' | 'lineKind'>) =>
-  `[${datum.product}] ${datum.metricName}（${getLineKindLabel(datum.lineKind).replace('值', '')}）`;
+const getProductMetricGroupLabel = (
+  datum: Pick<ProductTrendDatum, 'product' | 'metricName'> &
+    Partial<Pick<ProductTrendDatum, 'billingUnit' | 'region'>>,
+) => `${getProductDimensionLabel(datum)}, ${datum.metricName}`;
+
+const getProductMetricLineLabel = (
+  datum: Pick<ProductTrendDatum, 'product' | 'metricName' | 'lineKind'> &
+    Partial<Pick<ProductTrendDatum, 'billingUnit' | 'region'>>,
+) => `${getProductDimensionLabel(datum)}, ${datum.metricName}, ${getTooltipLineKindLabel(datum.lineKind)}`;
 
 const getProductLineKindLabel = (datum: Pick<ProductTrendDatum, 'product' | 'lineKind'>) =>
   `${datum.product}（${getLineKindLabel(datum.lineKind).replace('值', '')}）`;
@@ -368,11 +442,13 @@ const getProductLineKindLabel = (datum: Pick<ProductTrendDatum, 'product' | 'lin
 const getProductLegendName = (datum: ProductTrendDatum, legendMode: ProductLegendMode) =>
   legendMode === 'product'
     ? datum.product
-    : legendMode === 'productMetricLine'
-      ? getProductMetricLineLabel(datum)
-      : legendMode === 'productMetricGroup'
-        ? getProductMetricGroupLabel(datum)
-        : getProductMetricLegendName(datum);
+    : legendMode === 'productDimension'
+      ? getProductDimensionLabel(datum)
+      : legendMode === 'productMetricLine'
+        ? getProductMetricLineLabel(datum)
+        : legendMode === 'productMetricGroup'
+          ? getProductMetricGroupLabel(datum)
+          : getProductMetricLegendName(datum);
 
 const buildProductTrendData = (metric: MetricConfig, productKeys = DEFAULT_PRODUCTS): ProductTrendDatum[] => {
   const metricIndex = METRICS.findIndex((item) => item.key === metric.key);
@@ -393,7 +469,7 @@ const buildProductTrendData = (metric: MetricConfig, productKeys = DEFAULT_PRODU
           productKey: product.key,
           product: product.name,
           lineKind: 'actual' as const,
-          series: `${product.name} 实际值`,
+          series: `${product.name} 实际`,
           value: Number((metric.actual[periodIndex] * factor * valueMultiplier).toFixed(precision)),
           color: product.color,
           axisValueType,
@@ -406,7 +482,7 @@ const buildProductTrendData = (metric: MetricConfig, productKeys = DEFAULT_PRODU
           productKey: product.key,
           product: product.name,
           lineKind: 'target' as const,
-          series: `${product.name} 目标值`,
+          series: `${product.name} 目标`,
           value: Number((metric.target[periodIndex] * (1 + (factor - 1) * 0.36) * valueMultiplier).toFixed(precision)),
           color: product.color,
           axisValueType,
@@ -421,54 +497,67 @@ const buildFinalProductTrendData = (
   productKeys: string[],
   metricKeys: MetricKey[],
   colorMode: ProductColorMode = 'product',
+  billingUnits = DEFAULT_BILLING_UNITS,
+  regions = DEFAULT_REGIONS,
 ): ProductTrendDatum[] =>
   productKeys.map(getProductByKey).flatMap((product) =>
-    METRICS.filter((metric) => metricKeys.includes(metric.key)).flatMap((metric) => {
-      const metricIndex = METRICS.findIndex((item) => item.key === metric.key);
-      const axisValueType = getMetricAxisValueType(metric);
-      const valueMultiplier = axisValueType === 'price' ? CNY_EXCHANGE_RATE : 1;
-      const precision = axisValueType === 'price' ? 5 : 2;
-      const valueUnit = getMetricDisplayUnit(metric);
-      const color =
-        colorMode === 'productMetric'
-          ? getProductMetricColor(product.key, metric.key, productKeys, metricKeys)
-          : colorMode === 'metric'
-            ? getMetricColor(metric.key)
-            : getProductColor(product.key, productKeys);
+    billingUnits.flatMap((billingUnit) =>
+      regions.flatMap((region) =>
+        METRICS.filter((metric) => metricKeys.includes(metric.key)).flatMap((metric) => {
+          const metricIndex = METRICS.findIndex((item) => item.key === metric.key);
+          const axisValueType = getMetricAxisValueType(metric);
+          const valueMultiplier = axisValueType === 'price' ? CNY_EXCHANGE_RATE : 1;
+          const precision = axisValueType === 'price' ? 5 : 2;
+          const valueUnit = getMetricDisplayUnit(metric);
+          const color =
+            colorMode === 'productMetric'
+              ? getProductMetricColor(product.key, metric.key, productKeys, metricKeys)
+              : colorMode === 'metric'
+                ? getMetricColor(metric.key)
+                : getProductColor(product.key, productKeys);
 
-      return PERIODS.flatMap((period, periodIndex) => {
-        const factor = getProductFactor(product, periodIndex, metricIndex);
+          return PERIODS.flatMap((period, periodIndex) => {
+            const factor =
+              getProductFactor(product, periodIndex, metricIndex) *
+              getBillingRegionFactor(billingUnit, region, periodIndex);
+            const dimensionLabel = getProductDimensionLabel({ product: product.name, billingUnit, region });
 
-        return [
-          {
-            period,
-            metric: metric.key,
-            metricName: metric.name,
-            productKey: product.key,
-            product: product.name,
-            lineKind: 'actual' as const,
-            series: `${product.name} ${metric.name} 实际值`,
-            value: Number((metric.actual[periodIndex] * factor * valueMultiplier).toFixed(precision)),
-            color,
-            axisValueType,
-            valueUnit,
-          },
-          {
-            period,
-            metric: metric.key,
-            metricName: metric.name,
-            productKey: product.key,
-            product: product.name,
-            lineKind: 'target' as const,
-            series: `${product.name} ${metric.name} 目标值`,
-            value: Number((metric.target[periodIndex] * (1 + (factor - 1) * 0.42) * valueMultiplier).toFixed(precision)),
-            color,
-            axisValueType,
-            valueUnit,
-          },
-        ];
-      });
-    }),
+            return [
+              {
+                period,
+                metric: metric.key,
+                metricName: metric.name,
+                productKey: product.key,
+                product: product.name,
+                billingUnit,
+                region,
+                lineKind: 'actual' as const,
+                series: `${dimensionLabel}, ${metric.name}, 实际`,
+                value: Number((metric.actual[periodIndex] * factor * valueMultiplier).toFixed(precision)),
+                color,
+                axisValueType,
+                valueUnit,
+              },
+              {
+                period,
+                metric: metric.key,
+                metricName: metric.name,
+                productKey: product.key,
+                product: product.name,
+                billingUnit,
+                region,
+                lineKind: 'target' as const,
+                series: `${dimensionLabel}, ${metric.name}, 目标`,
+                value: Number((metric.target[periodIndex] * (1 + (factor - 1) * 0.42) * valueMultiplier).toFixed(precision)),
+                color,
+                axisValueType,
+                valueUnit,
+              },
+            ];
+          });
+        }),
+      ),
+    ),
   );
 
 const getDynamicAxisRange = (data: ProductTrendDatum[], axisValueType: AxisValueType) => {
@@ -530,6 +619,7 @@ const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: num
   tooltipElement.style.overflowX = 'hidden';
   tooltipElement.style.pointerEvents = 'auto';
   tooltipElement.style.overscrollBehavior = 'contain';
+  tooltipElement.onscroll = null;
 
   tooltipElement.querySelectorAll<HTMLElement>('*').forEach((element) => {
     element.style.maxWidth = `${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px`;
@@ -537,6 +627,67 @@ const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: num
   tooltipElement.querySelectorAll<HTMLElement>('[class*="value"], [class*="Value"]').forEach((element) => {
     element.style.whiteSpace = 'nowrap';
   });
+};
+
+const getVisibleAlignedTooltipElements = (scope: string) =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[data-target-trend-scrollable-tooltip="true"][data-target-trend-tooltip-align-scope="${scope}"]`,
+    ),
+  ).filter((tooltipElement) => {
+    const rect = tooltipElement.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
+
+const findTooltipAnchorElement = (scope: string, metricKey: string) =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(`[data-target-trend-tooltip-anchor-scope="${scope}"]`),
+  ).find((element) => element.dataset.targetTrendTooltipAnchorMetricKey === metricKey);
+
+const alignSplitTooltipRows = (scope: string) => {
+  window.requestAnimationFrame(() => {
+    const rows: Array<Array<{ tooltipElement: HTMLElement; tooltipTop: number; anchorTop: number }>> = [];
+
+    getVisibleAlignedTooltipElements(scope).forEach((tooltipElement) => {
+      tooltipElement.style.marginTop = '';
+
+      const metricKey = tooltipElement.dataset.targetTrendTooltipAlignMetricKey;
+      if (!metricKey) return;
+
+      const anchorElement = findTooltipAnchorElement(scope, metricKey);
+      if (!anchorElement) return;
+
+      const anchorTop = anchorElement.getBoundingClientRect().top;
+      const tooltipTop = tooltipElement.getBoundingClientRect().top;
+      const existingRow = rows.find((row) =>
+        row.some((item) => Math.abs(item.anchorTop - anchorTop) <= TOOLTIP_ROW_ALIGNMENT_TOLERANCE),
+      );
+      const rowItem = { tooltipElement, tooltipTop, anchorTop };
+
+      if (existingRow) {
+        existingRow.push(rowItem);
+      } else {
+        rows.push([rowItem]);
+      }
+    });
+
+    rows.forEach((row) => {
+      if (row.length < 2) return;
+
+      const alignedTop = Math.min(...row.map((item) => item.tooltipTop));
+      row.forEach(({ tooltipElement, tooltipTop }) => {
+        tooltipElement.style.marginTop = `${alignedTop - tooltipTop}px`;
+      });
+    });
+  });
+};
+
+const applySplitTooltipAlignment = (tooltipElement: HTMLElement, alignment?: TooltipAlignmentConfig) => {
+  if (!alignment) return;
+
+  tooltipElement.dataset.targetTrendTooltipAlignScope = alignment.scope;
+  tooltipElement.dataset.targetTrendTooltipAlignMetricKey = alignment.metricKey;
+  alignSplitTooltipRows(alignment.scope);
 };
 
 const renderProductTooltipTable = (tooltipElement: HTMLElement, actualTooltip: ITooltipActual, maxHeight?: number) => {
@@ -646,7 +797,8 @@ const buildProductLegendSpec = (
   item: {
     spaceCol: 18,
     spaceRow: 4,
-    padding: 2,
+    padding: 0,
+    height: 20,
     shape: {
       space: 6,
       style: {
@@ -688,6 +840,8 @@ const buildMetricChartSpec = (
   colorText3: string,
   colorBorder2: string,
   colorFunctionalIcon1: string,
+  showSinglePeriodPoints = false,
+  tooltipAlignment?: TooltipAlignmentConfig,
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
   const axisRange = getDynamicAxisRange(data, axisValueType);
@@ -707,6 +861,7 @@ const buildMetricChartSpec = (
         yField: 'value',
         seriesField: 'series',
         invalidType: 'link',
+        animationState: { duration: 0 },
         line: {
           style: {
             stroke: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
@@ -717,21 +872,38 @@ const buildMetricChartSpec = (
         point: {
           visible: true,
           style: {
-            size: 0,
-            fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
-            stroke: '#fff',
-            fillOpacity: 0,
-            strokeOpacity: 0,
-            lineWidth: 0,
+            size: showSinglePeriodPoints ? 10 : 0,
+            symbolType: 'circle',
+            fill: (datum: Datum) => {
+              const trendDatum = asProductTrendDatum(datum);
+              if (!trendDatum) return '#A9AEB8';
+              return trendDatum.lineKind === 'target' ? '#fff' : trendDatum.color;
+            },
+            stroke: (datum: Datum) => {
+              const trendDatum = asProductTrendDatum(datum);
+              if (!trendDatum) return '#fff';
+              return trendDatum.lineKind === 'target' ? trendDatum.color : '#fff';
+            },
+            fillOpacity: (datum: Datum) =>
+              showSinglePeriodPoints && asProductTrendDatum(datum) ? 1 : 0,
+            strokeOpacity: showSinglePeriodPoints ? 1 : 0,
+            lineWidth: showSinglePeriodPoints ? 2 : 0,
+            lineDash: (datum: Datum) => (asProductTrendDatum(datum)?.lineKind === 'target' ? [3, 2] : [0, 0]),
           },
           state: {
             hover: {
               visible: true,
-              style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+              style: {
+                ...FINAL_HOVER_POINT_STYLE,
+                fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
+              },
             },
             dimension_hover: {
               visible: true,
-              style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+              style: {
+                ...FINAL_HOVER_POINT_STYLE,
+                fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
+              },
             },
           },
         },
@@ -767,11 +939,26 @@ const buildMetricChartSpec = (
         title: { visible: false },
       },
     ],
-    legends: [buildProductLegendSpec(colorText2, colorText3, colorFunctionalIcon1)],
+    legends: [
+      buildProductLegendSpec(
+        colorText2,
+        colorText3,
+        colorFunctionalIcon1,
+        Array.from(new Map(data.map((item) => [getProductDimensionLabel(item), item.color]))).map(
+          ([name, color]) => ({ name, color }),
+        ),
+        'productDimension',
+      ),
+    ],
     tooltip: {
       renderMode: 'html',
+      enterable: true,
       confine: true,
-      updateElement: applyLineKindTooltipMarkerStyle,
+      updateElement: (tooltipElement: HTMLElement, actualTooltip: ITooltipActual) => {
+        applyScrollableTooltipStyle(tooltipElement, FINAL_SCHEME_SPLIT_TOOLTIP_MAX_HEIGHT);
+        applyLineKindTooltipMarkerStyle(tooltipElement, actualTooltip);
+        applySplitTooltipAlignment(tooltipElement, tooltipAlignment);
+      },
       dimension: {
         shapeType: 'square',
         shapeSize: 10,
@@ -848,6 +1035,7 @@ const buildMetricChartSpec = (
 const buildProductLineSeriesSpec = (
   dataId: string,
   axisValueType: AxisValueType,
+  showSinglePeriodPoints = false,
 ): NonNullable<ICommonChartSpec['series']>[number] => ({
   id: axisValueType === 'price' ? 'priceSeries' : 'rateSeries',
   type: 'line' as const,
@@ -856,6 +1044,7 @@ const buildProductLineSeriesSpec = (
   yField: 'value',
   seriesField: 'series',
   invalidType: 'link',
+  animationState: { duration: 0 },
   line: {
     style: {
       stroke: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
@@ -866,21 +1055,38 @@ const buildProductLineSeriesSpec = (
   point: {
     visible: true,
     style: {
-      size: 0,
-      fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
-      stroke: '#fff',
-      fillOpacity: 0,
-      strokeOpacity: 0,
-      lineWidth: 0,
+      size: showSinglePeriodPoints ? 10 : 0,
+      symbolType: 'circle',
+      fill: (datum: Datum) => {
+        const trendDatum = asProductTrendDatum(datum);
+        if (!trendDatum) return '#A9AEB8';
+        return trendDatum.lineKind === 'target' ? '#fff' : trendDatum.color;
+      },
+      stroke: (datum: Datum) => {
+        const trendDatum = asProductTrendDatum(datum);
+        if (!trendDatum) return '#fff';
+        return trendDatum.lineKind === 'target' ? trendDatum.color : '#fff';
+      },
+      fillOpacity: (datum: Datum) =>
+        showSinglePeriodPoints && asProductTrendDatum(datum) ? 1 : 0,
+      strokeOpacity: showSinglePeriodPoints ? 1 : 0,
+      lineWidth: showSinglePeriodPoints ? 2 : 0,
+      lineDash: (datum: Datum) => (asProductTrendDatum(datum)?.lineKind === 'target' ? [3, 2] : [0, 0]),
     },
     state: {
       hover: {
         visible: true,
-        style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+        style: {
+          ...FINAL_HOVER_POINT_STYLE,
+          fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
+        },
       },
       dimension_hover: {
         visible: true,
-        style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+        style: {
+          ...FINAL_HOVER_POINT_STYLE,
+          fill: (datum: Datum) => asProductTrendDatum(datum)?.color ?? '#A9AEB8',
+        },
       },
     },
   },
@@ -893,6 +1099,7 @@ const buildFinalOverviewChartSpec = (
   colorBorder2: string,
   colorFunctionalIcon1: string,
   selectedLegendNames?: string[] | null,
+  showSinglePeriodPoints = false,
 ): ICommonChartSpec => {
   const activeLegendNameSet = selectedLegendNames ? new Set(selectedLegendNames) : null;
   const visibleData = activeLegendNameSet
@@ -993,7 +1200,10 @@ const buildFinalOverviewChartSpec = (
       { id: 'overviewPriceData', values: priceData },
       { id: 'overviewRateData', values: rateData },
     ],
-    series: [buildProductLineSeriesSpec('overviewPriceData', 'price'), buildProductLineSeriesSpec('overviewRateData', 'rate')],
+    series: [
+      buildProductLineSeriesSpec('overviewPriceData', 'price', showSinglePeriodPoints),
+      buildProductLineSeriesSpec('overviewRateData', 'rate', showSinglePeriodPoints),
+    ],
     axes,
     legends: [
       buildProductLegendSpec(
@@ -1094,14 +1304,14 @@ const getDimensionPeriod = (event: unknown) => {
 
 function LineKindLegend() {
   return (
-    <div className={styles.lineKindLegend} aria-label="实际值与目标值图例">
+    <div className={styles.lineKindLegend} aria-label="实际与目标图例">
       <div className={styles.legendItem}>
         <span className={styles.legendLine} />
-        <span className={styles.legendLabel}>实际值</span>
+        <span className={styles.legendLabel}>实际</span>
       </div>
       <div className={styles.legendItem}>
         <span className={`${styles.legendLine} ${styles.legendLineDashed}`} />
-        <span className={styles.legendLabel}>目标值</span>
+        <span className={styles.legendLabel}>目标</span>
       </div>
     </div>
   );
@@ -1223,32 +1433,54 @@ function FinalOverviewTrendChart() {
   const splitChartRefs = useRef<Partial<Record<MetricKey, IVChart>>>({});
   const draggingMetricKeyRef = useRef<MetricKey | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>(DEFAULT_PRODUCTS);
+  const [selectedBillingUnits, setSelectedBillingUnits] = useState<string[]>(DEFAULT_BILLING_UNITS);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(DEFAULT_REGIONS);
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(DEFAULT_METRICS);
-  const [timeWindow, setTimeWindow] = useState('last6Months');
+  const [selectedLineKinds, setSelectedLineKinds] = useState<LineKind[]>(DEFAULT_LINE_KINDS);
+  const [timeWindow, setTimeWindow] = useState('2026-08');
   const [viewMode, setViewMode] = useState<FinalViewMode>('multiple');
   const [selectedOverviewLegendNames, setSelectedOverviewLegendNames] = useState<string[] | null>(null);
   const [metricOrder, setMetricOrder] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [draggingMetricKey, setDraggingMetricKey] = useState<MetricKey | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
   const [lockedTooltip, setLockedTooltip] = useState<{ metricKey: MetricKey; period: string } | null>(null);
+  const lockedTooltipRef = useRef<{ metricKey: MetricKey; period: string } | null>(null);
   const [legendFocusTooltip, setLegendFocusTooltip] = useState<{ x: number; y: number } | null>(null);
 
-  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
+  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : [timeWindow]), [timeWindow]);
+  const showSinglePeriodPoints = selectedPeriods.length === 1;
   const orderedSelectedMetrics = useMemo(
     () => metricOrder.filter((metricKey) => selectedMetrics.includes(metricKey)),
     [metricOrder, selectedMetrics],
   );
   const productAllState = useMemo(() => getAllSelectionState(selectedProducts, PRODUCT_OPTIONS), [selectedProducts]);
+  const billingUnitAllState = useMemo(
+    () => getAllSelectionState(selectedBillingUnits, BILLING_UNIT_OPTIONS),
+    [selectedBillingUnits],
+  );
+  const regionAllState = useMemo(() => getAllSelectionState(selectedRegions, REGION_OPTIONS), [selectedRegions]);
   const finalProductOptions = useMemo(
     () => buildOptionsWithSelectAll(PRODUCT_OPTIONS, productAllState),
     [productAllState],
   );
+  const finalBillingUnitOptions = useMemo(
+    () => buildOptionsWithSelectAll(BILLING_UNIT_OPTIONS, billingUnitAllState),
+    [billingUnitAllState],
+  );
+  const finalRegionOptions = useMemo(
+    () => buildOptionsWithSelectAll(REGION_OPTIONS, regionAllState),
+    [regionAllState],
+  );
   const overviewChartData = useMemo(
     () =>
-      buildFinalProductTrendData(selectedProducts, selectedMetrics, 'metric').filter((item) =>
-        selectedPeriods.includes(item.period),
-      ),
-    [selectedMetrics, selectedPeriods, selectedProducts],
+      buildFinalProductTrendData(
+        selectedProducts,
+        selectedMetrics,
+        'metric',
+        selectedBillingUnits,
+        selectedRegions,
+      ).filter((item) => selectedPeriods.includes(item.period) && selectedLineKinds.includes(item.lineKind)),
+    [selectedBillingUnits, selectedLineKinds, selectedMetrics, selectedPeriods, selectedProducts, selectedRegions],
   );
   const overviewLegendNames = useMemo(
     () => Array.from(new Map(overviewChartData.map((item) => [getProductMetricGroupLabel(item), item.color])).keys()),
@@ -1256,10 +1488,18 @@ function FinalOverviewTrendChart() {
   );
   const splitChartData = useMemo(
     () =>
-      buildFinalProductTrendData(selectedProducts, selectedMetrics, 'product').filter((item) =>
-        selectedPeriods.includes(item.period),
-      ),
-    [selectedMetrics, selectedPeriods, selectedProducts],
+      buildFinalProductTrendData(
+        selectedProducts,
+        selectedMetrics,
+        'product',
+        selectedBillingUnits,
+        selectedRegions,
+      ).filter((item) => selectedPeriods.includes(item.period) && selectedLineKinds.includes(item.lineKind)),
+    [selectedBillingUnits, selectedLineKinds, selectedMetrics, selectedPeriods, selectedProducts, selectedRegions],
+  );
+  const splitLegendNames = useMemo(
+    () => Array.from(new Set(splitChartData.map((item) => getProductLegendName(item, 'productDimension')))),
+    [splitChartData],
   );
   const overviewSpec = useMemo(
     () =>
@@ -1270,8 +1510,17 @@ function FinalOverviewTrendChart() {
         colorBorder2,
         colorFunctionalIcon1,
         selectedOverviewLegendNames,
+        showSinglePeriodPoints,
       ),
-    [colorBorder2, colorFunctionalIcon1, colorText2, colorText3, overviewChartData, selectedOverviewLegendNames],
+    [
+      colorBorder2,
+      colorFunctionalIcon1,
+      colorText2,
+      colorText3,
+      overviewChartData,
+      selectedOverviewLegendNames,
+      showSinglePeriodPoints,
+    ],
   );
   const splitChartItems = useMemo(
     () =>
@@ -1280,13 +1529,31 @@ function FinalOverviewTrendChart() {
         const metricData = splitChartData.filter((item) => item.metric === metric.key);
         return {
           metric,
-          spec: buildMetricChartSpec(metric, metricData, colorText2, colorText3, colorBorder2, colorFunctionalIcon1),
+          spec: buildMetricChartSpec(
+            metric,
+            metricData,
+            colorText2,
+            colorText3,
+            colorBorder2,
+            colorFunctionalIcon1,
+            showSinglePeriodPoints,
+            { scope: 'overview-final-split', metricKey: metric.key },
+          ),
         };
       }),
-    [colorBorder2, colorFunctionalIcon1, colorText2, colorText3, orderedSelectedMetrics, splitChartData],
+    [
+      colorBorder2,
+      colorFunctionalIcon1,
+      colorText2,
+      colorText3,
+      orderedSelectedMetrics,
+      showSinglePeriodPoints,
+      splitChartData,
+    ],
   );
 
   const clearLockedTooltip = useCallback(() => {
+    lockedTooltipRef.current = null;
     setLockedTooltip(null);
     Object.values(splitChartRefs.current).forEach((chart) => {
       chart?.hideTooltip();
@@ -1337,14 +1604,16 @@ function FinalOverviewTrendChart() {
       const period = getDimensionPeriod(event);
       if (!period) return;
 
-      setLockedTooltip({ metricKey, period });
+      const nextLockedTooltip = { metricKey, period };
+      lockedTooltipRef.current = nextLockedTooltip;
+      setLockedTooltip(nextLockedTooltip);
       syncSplitTooltip(period);
     },
     [syncSplitTooltip],
   );
   const handleSplitDimensionHover = useCallback(
     (event: unknown) => {
-      if (lockedTooltip) return;
+      if (lockedTooltipRef.current) return;
 
       const period = getDimensionPeriod(event);
       if (getPathValue(event, ['action']) === 'leave' || !period) {
@@ -1354,7 +1623,7 @@ function FinalOverviewTrendChart() {
 
       syncSplitTooltip(period);
     },
-    [clearLockedTooltip, lockedTooltip, syncSplitTooltip],
+    [clearLockedTooltip, syncSplitTooltip],
   );
   const moveFacetChart = useCallback((sourceMetricKey: MetricKey, event: unknown) => {
     const point = getClientPointFromVChartEvent(event);
@@ -1415,12 +1684,22 @@ function FinalOverviewTrendChart() {
 
   useEffect(() => {
     setSelectedOverviewLegendNames(null);
-  }, [selectedMetrics, selectedProducts, timeWindow]);
+  }, [selectedBillingUnits, selectedLineKinds, selectedMetrics, selectedProducts, selectedRegions, timeWindow]);
 
   useEffect(() => {
     clearLockedTooltip();
     hideLegendFocusTooltip();
-  }, [clearLockedTooltip, hideLegendFocusTooltip, selectedMetrics, selectedProducts, timeWindow, viewMode]);
+  }, [
+    clearLockedTooltip,
+    hideLegendFocusTooltip,
+    selectedBillingUnits,
+    selectedLineKinds,
+    selectedMetrics,
+    selectedProducts,
+    selectedRegions,
+    timeWindow,
+    viewMode,
+  ]);
 
   useEffect(() => {
     if (!lockedTooltip) return undefined;
@@ -1481,7 +1760,13 @@ function FinalOverviewTrendChart() {
     [dragPreview?.metricKey, splitChartItems],
   );
 
-  if (!selectedProducts.length || !selectedMetrics.length) {
+  if (
+    !selectedProducts.length ||
+    !selectedBillingUnits.length ||
+    !selectedRegions.length ||
+    !selectedMetrics.length ||
+    !selectedLineKinds.length
+  ) {
     return (
       <div className={styles.schemeStack}>
         <div className={styles.dualAxisOuterToolbar}>
@@ -1496,6 +1781,16 @@ function FinalOverviewTrendChart() {
             triggerProps={{ popupStyle: { width: 320 } }}
           />
           <Select
+            addBefore="数据取值"
+            className={styles.dualAxisMultiSelect}
+            mode="multiple"
+            maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+            value={selectedLineKinds}
+            options={LINE_KIND_OPTIONS}
+            onChange={(value) => setSelectedLineKinds(normalizeLineKindSelection(value as string[] | string))}
+            triggerProps={{ popupStyle: { width: 180 } }}
+          />
+          <Select
             addBefore="商品"
             className={styles.dualAxisMultiSelect}
             mode="multiple"
@@ -1506,6 +1801,32 @@ function FinalOverviewTrendChart() {
               setSelectedProducts(normalizeSelectionWithAll(value as string[] | string, PRODUCT_OPTIONS, selectedProducts))
             }
             triggerProps={{ popupStyle: { width: 220 } }}
+          />
+          <Select
+            addBefore="计费单元"
+            className={styles.dualAxisMultiSelect}
+            mode="multiple"
+            maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+            value={selectedBillingUnits}
+            options={finalBillingUnitOptions}
+            onChange={(value) =>
+              setSelectedBillingUnits(
+                normalizeSelectionWithAll(value as string[] | string, BILLING_UNIT_OPTIONS, selectedBillingUnits),
+              )
+            }
+            triggerProps={{ popupStyle: { width: 260 } }}
+          />
+          <Select
+            addBefore="大区"
+            className={styles.dualAxisMultiSelect}
+            mode="multiple"
+            maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+            value={selectedRegions}
+            options={finalRegionOptions}
+            onChange={(value) =>
+              setSelectedRegions(normalizeSelectionWithAll(value as string[] | string, REGION_OPTIONS, selectedRegions))
+            }
+            triggerProps={{ popupStyle: { width: 180 } }}
           />
           <Select
             addBefore="时间"
@@ -1519,7 +1840,7 @@ function FinalOverviewTrendChart() {
             <Radio value="multiple">多图拆分</Radio>
           </Radio.Group>
         </div>
-        <Card className={styles.emptyCard}>请选择至少一个指标和一个商品</Card>
+        <Card className={styles.emptyCard}>请选择至少一个指标、数据取值、商品、计费单元和大区</Card>
       </div>
     );
   }
@@ -1538,6 +1859,16 @@ function FinalOverviewTrendChart() {
           triggerProps={{ popupStyle: { width: 320 } }}
         />
         <Select
+          addBefore="数据取值"
+          className={styles.dualAxisMultiSelect}
+          mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+          value={selectedLineKinds}
+          options={LINE_KIND_OPTIONS}
+          onChange={(value) => setSelectedLineKinds(normalizeLineKindSelection(value as string[] | string))}
+          triggerProps={{ popupStyle: { width: 180 } }}
+        />
+        <Select
           addBefore="商品"
           className={styles.dualAxisMultiSelect}
           mode="multiple"
@@ -1548,6 +1879,32 @@ function FinalOverviewTrendChart() {
             setSelectedProducts(normalizeSelectionWithAll(value as string[] | string, PRODUCT_OPTIONS, selectedProducts))
           }
           triggerProps={{ popupStyle: { width: 220 } }}
+        />
+        <Select
+          addBefore="计费单元"
+          className={styles.dualAxisMultiSelect}
+          mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+          value={selectedBillingUnits}
+          options={finalBillingUnitOptions}
+          onChange={(value) =>
+            setSelectedBillingUnits(
+              normalizeSelectionWithAll(value as string[] | string, BILLING_UNIT_OPTIONS, selectedBillingUnits),
+            )
+          }
+          triggerProps={{ popupStyle: { width: 260 } }}
+        />
+        <Select
+          addBefore="大区"
+          className={styles.dualAxisMultiSelect}
+          mode="multiple"
+          maxTagCount={{ count: 'responsive', render: (invisibleTagCount) => `+${invisibleTagCount}` }}
+          value={selectedRegions}
+          options={finalRegionOptions}
+          onChange={(value) =>
+            setSelectedRegions(normalizeSelectionWithAll(value as string[] | string, REGION_OPTIONS, selectedRegions))
+          }
+          triggerProps={{ popupStyle: { width: 180 } }}
         />
         <Select
           addBefore="时间"
@@ -1580,6 +1937,8 @@ function FinalOverviewTrendChart() {
                 key={metric.key}
                 className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel}`}
                 data-overview-final-metric-key={metric.key}
+                data-target-trend-tooltip-anchor-scope="overview-final-split"
+                data-target-trend-tooltip-anchor-metric-key={metric.key}
               >
                 <div
                   className={`${styles.chartHeader} ${styles.dualAxisDragHeader}`}
@@ -1612,12 +1971,12 @@ function FinalOverviewTrendChart() {
                   onLegendItemClick={(event) => {
                     hideLegendFocusTooltip();
                     if (isLegendFocusIconEvent(event)) {
-                      showOnlyLegendItem(chartRefOrNull(splitChartRefs.current[metric.key]), event);
+                      showOnlyLegendItem(chartRefOrNull(splitChartRefs.current[metric.key]), event, splitLegendNames);
                     }
                   }}
                   onPointerLeave={() => {
                     hideLegendFocusTooltip();
-                    if (!lockedTooltip) {
+                    if (!lockedTooltipRef.current) {
                       clearLockedTooltip();
                     }
                   }}

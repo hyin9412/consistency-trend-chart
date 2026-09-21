@@ -1,4 +1,4 @@
-import { Card, Divider, Message, PageHeader, Select, Tag } from '@tod-m/materials/ve-o';
+import { Card, Divider, Message, PageHeader, Select } from '@tod-m/materials/ve-o';
 import { VChart } from '@visactor/react-vchart';
 import {
   registerDomTooltipHandler,
@@ -40,7 +40,7 @@ const BILLING_UNIT_OPTIONS = [
 
 const REGION_OPTIONS = [{ label: 'AP', value: 'AP' }];
 const PERIOD_OPTIONS = [{ label: '2026-08', value: '2026-08' }];
-const CURRENCY_OPTIONS = [{ label: '全部未选', value: 'all' }];
+const CURRENCY_OPTIONS = [{ label: '人民币', value: 'cny' }];
 
 const COST_FLOW_DATA: Record<string, CostFlowData> = {
   'bytegraph.cpu': {
@@ -226,6 +226,7 @@ registerTooltip();
 registerDomTooltipHandler();
 
 const getTooltipDatum = (datum: any) => datum?.datum ?? datum ?? {};
+const removeBytegraphPrefix = (text: string) => text.replace(/bytegraph_/g, '');
 const getTooltipItem = (datum: any, index: number, field: 'key' | 'value') => {
   const item = getTooltipDatum(datum).tooltipItems?.[index];
   return item?.[field] ?? '';
@@ -234,6 +235,17 @@ const getLabelText = (datum: any) => datum?.datum?.labelText ?? datum?.labelText
 
 function buildSankeySpec(unit: string): ISankeyChartSpec {
   const current = COST_FLOW_DATA[unit] ?? COST_FLOW_DATA['bytegraph.mem'];
+  const nodes = current.nodes.map((node) => ({
+    ...node,
+    nodeName: removeBytegraphPrefix(node.nodeName),
+    labelText: removeBytegraphPrefix(node.labelText),
+    tooltipTitle: removeBytegraphPrefix(node.tooltipTitle),
+    tooltipItems: node.tooltipItems.map((item) => ({
+      ...item,
+      key: removeBytegraphPrefix(item.key),
+    })),
+  }));
+
   return {
     type: 'sankey',
     background: '#ffffff',
@@ -242,13 +254,13 @@ function buildSankeySpec(unit: string): ISankeyChartSpec {
         id: 'costFlow',
         values: [
           {
-            nodes: current.nodes,
+            nodes,
             links: current.links.map((link) => ({
               ...link,
-              source: current.nodes[link.source].nodeName,
-              target: current.nodes[link.target].nodeName,
-              tooltipTitle: current.nodes[link.tooltipFrom].tooltipTitle,
-              tooltipItems: current.nodes[link.tooltipFrom].tooltipItems,
+              source: nodes[link.source].nodeName,
+              target: nodes[link.target].nodeName,
+              tooltipTitle: nodes[link.tooltipFrom].tooltipTitle,
+              tooltipItems: nodes[link.tooltipFrom].tooltipItems,
             })),
           },
         ],
@@ -385,10 +397,9 @@ const CostFlowSankey: React.FC = () => {
   const [billingUnit, setBillingUnit] = useState('bytegraph.mem');
   const [region, setRegion] = useState('AP');
   const [period, setPeriod] = useState('2026-08');
-  const [currency, setCurrency] = useState('all');
+  const [currency, setCurrency] = useState('cny');
 
   const spec = useMemo(() => buildSankeySpec(billingUnit), [billingUnit]);
-  const totalCost = COST_FLOW_DATA[billingUnit]?.total ?? 0;
 
   return (
     <div className={styles.page}>
@@ -441,7 +452,6 @@ const CostFlowSankey: React.FC = () => {
             <div>
               <div className={styles.sectionTitle}>成本流向</div>
             </div>
-            <Tag.TagPro type="success">总成本 ${totalCost.toFixed(2)} 万</Tag.TagPro>
           </div>
           <div className={styles.chartWrap}>
             <VChart

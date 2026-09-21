@@ -70,6 +70,11 @@ interface DragPreviewState {
   offsetY: number;
 }
 
+interface TooltipAlignmentConfig {
+  scope: string;
+  metricKey: MetricKey;
+}
+
 const PERIODS = ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'];
 const CNY_EXCHANGE_RATE = 7.2;
 const DEFAULT_BILLING_UNITS = ['bytegraph.cpu'];
@@ -90,7 +95,10 @@ const REGION_OPTIONS = [
   { label: 'va', value: 'va' },
 ];
 
-const TIME_WINDOW_OPTIONS = [{ label: '过去 6 个月', value: 'last6Months' }];
+const TIME_WINDOW_OPTIONS = [
+  { label: '2026-08', value: '2026-08' },
+  { label: '过去 6 个月', value: 'last6Months' },
+];
 
 const METRICS: MetricConfig[] = [
   {
@@ -150,10 +158,10 @@ const ORIGIN_CHART_COLOR_PALETTE = [
 ];
 
 const DIMENSIONS: DimensionConfig[] = [
-  { key: 'cpu-cn', name: 'bytegraph.cpu × cn', color: '#1664FF', delta: -0.02 },
-  { key: 'cpu-ap', name: 'bytegraph.cpu × ap', color: '#00A870', delta: 0.04 },
-  { key: 'mem-cn', name: 'bytegraph.mem × cn', color: '#FF7D00', delta: -0.06 },
-  { key: 'storage-ap', name: 'bytegraph.storage × ap', color: '#722ED1', delta: 0.08 },
+  { key: 'cpu-cn', name: 'bytegraph.cpu|cn', color: '#1664FF', delta: -0.02 },
+  { key: 'cpu-ap', name: 'bytegraph.cpu|ap', color: '#00A870', delta: 0.04 },
+  { key: 'mem-cn', name: 'bytegraph.mem|cn', color: '#FF7D00', delta: -0.06 },
+  { key: 'storage-ap', name: 'bytegraph.storage|ap', color: '#722ED1', delta: 0.08 },
 ];
 
 const DRILLDOWN_LEGEND_ID = 'target-trend-drilldown-legend';
@@ -163,7 +171,18 @@ const TOOLTIP_BODY_FONT_SIZE = 12;
 const TOOLTIP_BODY_LINE_HEIGHT = 20;
 const TOOLTIP_BODY_FONT_WEIGHT = 400;
 const FINAL_SCHEME_TOOLTIP_MAX_HEIGHT = 420;
+const FINAL_SCHEME_SPLIT_TOOLTIP_MAX_HEIGHT = 264;
 const FINAL_SCHEME_TOOLTIP_MAX_WIDTH = 500;
+const TOOLTIP_ROW_ALIGNMENT_TOLERANCE = 8;
+const FINAL_HOVER_POINT_STYLE = {
+  size: 10,
+  symbolType: 'circle',
+  lineWidth: 2,
+  stroke: '#fff',
+  fillOpacity: 1,
+  strokeOpacity: 1,
+  lineDash: [0, 0],
+};
 const LEGEND_PAGER_ARROW_UP = 'M3 7.5L6 4.5L9 7.5';
 const LEGEND_PAGER_ARROW_DOWN = 'M3 4.5L6 7.5L9 4.5';
 
@@ -347,15 +366,20 @@ const getComboMetricLegendName = (datum: Pick<DualAxisTrendDatum, 'combo' | 'met
 
 const getLineKindLabel = (lineKind: LineKind) => (lineKind === 'actual' ? '实际' : '目标');
 
+const formatBillingUnitForChart = (billingUnit: string) => billingUnit.replace(/^bytegraph\./i, '');
+
+const getComboDimensionLabel = (datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region'>) =>
+  `${formatBillingUnitForChart(datum.billingUnit)}|${datum.region}`;
+
 const getComboMetricGroupLabel = (datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'metricName'>) =>
-  `[${datum.billingUnit}×${datum.region}] ${datum.metricName}`;
+  `${getComboDimensionLabel(datum)}, ${datum.metricName}`;
 
 const getComboMetricLineLabel = (
   datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'metricName' | 'lineKind'>,
-) => `[${datum.billingUnit}×${datum.region}] ${datum.metricName}（${getLineKindLabel(datum.lineKind)}）`;
+) => `${getComboDimensionLabel(datum)}, ${datum.metricName}, ${getLineKindLabel(datum.lineKind)}`;
 
 const getComboLineKindLabel = (datum: Pick<DualAxisTrendDatum, 'billingUnit' | 'region' | 'lineKind'>) =>
-  `${datum.billingUnit} × ${datum.region} （${getLineKindLabel(datum.lineKind)}）`;
+  `${getComboDimensionLabel(datum)}, ${getLineKindLabel(datum.lineKind)}`;
 
 const getDualAxisLegendName = (datum: DualAxisTrendDatum, legendMode: DualAxisLegendMode) =>
   legendMode === 'metric'
@@ -452,7 +476,7 @@ const buildDualAxisTrendData = (
 ): DualAxisTrendDatum[] =>
   billingUnits.flatMap((billingUnit) =>
     regions.flatMap((region) => {
-      const combo = `${billingUnit} × ${region}`;
+      const combo = getComboDimensionLabel({ billingUnit, region });
       const selectedMetrics = METRICS.filter((metric) => metricKeys.includes(metric.key));
 
       return selectedMetrics.flatMap((metric) =>
@@ -476,7 +500,7 @@ const buildDualAxisTrendData = (
               metricName: metric.name,
               dimension: combo,
               lineKind: 'actual' as const,
-              series: `${combo} ${metric.name} 实际值`,
+              series: `${combo}, ${metric.name}, 实际值`,
               value: Number((metric.actual[index] * factor * valueMultiplier).toFixed(precision)),
               axisValueType,
               billingUnit,
@@ -491,7 +515,7 @@ const buildDualAxisTrendData = (
               metricName: metric.name,
               dimension: combo,
               lineKind: 'target' as const,
-              series: `${combo} ${metric.name} 目标值`,
+              series: `${combo}, ${metric.name}, 目标值`,
               value: Number((metric.target[index] * (1 + (factor - 1) * 0.42) * valueMultiplier).toFixed(precision)),
               axisValueType,
               billingUnit,
@@ -650,7 +674,8 @@ const buildDualAxisLegendSpec = (
   item: {
     spaceCol: 18,
     spaceRow: 4,
-    padding: 2,
+    padding: 0,
+    height: 20,
     shape: {
       space: 6,
       style: {
@@ -773,7 +798,11 @@ const buildAttainmentLineSpec = (
   },
 });
 
-const buildDualAxisLineSeriesSpec = (dataId: string, axisValueType: AxisValueType) =>
+const buildDualAxisLineSeriesSpec = (
+  dataId: string,
+  axisValueType: AxisValueType,
+  showSinglePeriodPoints = false,
+) =>
   ({
     id: axisValueType === 'price' ? 'priceSeries' : 'rateSeries',
     type: 'line',
@@ -782,6 +811,7 @@ const buildDualAxisLineSeriesSpec = (dataId: string, axisValueType: AxisValueTyp
     yField: 'value',
     seriesField: 'series',
     invalidType: 'link',
+    animationState: { duration: 0 },
     line: {
       style: {
         stroke: (datum: DualAxisTrendDatum) => datum.color,
@@ -792,21 +822,28 @@ const buildDualAxisLineSeriesSpec = (dataId: string, axisValueType: AxisValueTyp
     point: {
       visible: true,
       style: {
-        size: 0,
-        fill: (datum: DualAxisTrendDatum) => datum.color,
-        stroke: '#fff',
-        fillOpacity: 0,
-        strokeOpacity: 0,
-        lineWidth: 0,
+        size: showSinglePeriodPoints ? 10 : 0,
+        fill: (datum: DualAxisTrendDatum) => (datum.lineKind === 'target' ? '#fff' : datum.color),
+        stroke: (datum: DualAxisTrendDatum) => (datum.lineKind === 'target' ? datum.color : '#fff'),
+        fillOpacity: showSinglePeriodPoints ? 1 : 0,
+        strokeOpacity: showSinglePeriodPoints ? 1 : 0,
+        lineWidth: showSinglePeriodPoints ? 2 : 0,
+        lineDash: (datum: DualAxisTrendDatum) => (datum.lineKind === 'target' ? [3, 2] : [0, 0]),
       },
       state: {
         hover: {
           visible: true,
-          style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+          style: {
+            ...FINAL_HOVER_POINT_STYLE,
+            fill: (datum: DualAxisTrendDatum) => datum.color,
+          },
         },
         dimension_hover: {
           visible: true,
-          style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+          style: {
+            ...FINAL_HOVER_POINT_STYLE,
+            fill: (datum: DualAxisTrendDatum) => datum.color,
+          },
         },
       },
     },
@@ -821,6 +858,7 @@ const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: num
   tooltipElement.style.overflowX = 'hidden';
   tooltipElement.style.pointerEvents = 'auto';
   tooltipElement.style.overscrollBehavior = 'contain';
+  tooltipElement.onscroll = null;
 
   tooltipElement.querySelectorAll<HTMLElement>('*').forEach((element) => {
     element.style.maxWidth = `${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px`;
@@ -828,6 +866,67 @@ const applyScrollableTooltipStyle = (tooltipElement: HTMLElement, maxHeight: num
   tooltipElement.querySelectorAll<HTMLElement>('[class*="value"], [class*="Value"]').forEach((element) => {
     element.style.whiteSpace = 'nowrap';
   });
+};
+
+const getVisibleAlignedTooltipElements = (scope: string) =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[data-target-trend-scrollable-tooltip="true"][data-target-trend-tooltip-align-scope="${scope}"]`,
+    ),
+  ).filter((tooltipElement) => {
+    const rect = tooltipElement.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
+
+const findTooltipAnchorElement = (scope: string, metricKey: string) =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(`[data-target-trend-tooltip-anchor-scope="${scope}"]`),
+  ).find((element) => element.dataset.targetTrendTooltipAnchorMetricKey === metricKey);
+
+const alignSplitTooltipRows = (scope: string) => {
+  window.requestAnimationFrame(() => {
+    const rows: Array<Array<{ tooltipElement: HTMLElement; tooltipTop: number; anchorTop: number }>> = [];
+
+    getVisibleAlignedTooltipElements(scope).forEach((tooltipElement) => {
+      tooltipElement.style.marginTop = '';
+
+      const metricKey = tooltipElement.dataset.targetTrendTooltipAlignMetricKey;
+      if (!metricKey) return;
+
+      const anchorElement = findTooltipAnchorElement(scope, metricKey);
+      if (!anchorElement) return;
+
+      const anchorTop = anchorElement.getBoundingClientRect().top;
+      const tooltipTop = tooltipElement.getBoundingClientRect().top;
+      const existingRow = rows.find((row) =>
+        row.some((item) => Math.abs(item.anchorTop - anchorTop) <= TOOLTIP_ROW_ALIGNMENT_TOLERANCE),
+      );
+      const rowItem = { tooltipElement, tooltipTop, anchorTop };
+
+      if (existingRow) {
+        existingRow.push(rowItem);
+      } else {
+        rows.push([rowItem]);
+      }
+    });
+
+    rows.forEach((row) => {
+      if (row.length < 2) return;
+
+      const alignedTop = Math.min(...row.map((item) => item.tooltipTop));
+      row.forEach(({ tooltipElement, tooltipTop }) => {
+        tooltipElement.style.marginTop = `${alignedTop - tooltipTop}px`;
+      });
+    });
+  });
+};
+
+const applySplitTooltipAlignment = (tooltipElement: HTMLElement, alignment?: TooltipAlignmentConfig) => {
+  if (!alignment) return;
+
+  tooltipElement.dataset.targetTrendTooltipAlignScope = alignment.scope;
+  tooltipElement.dataset.targetTrendTooltipAlignMetricKey = alignment.metricKey;
+  alignSplitTooltipRows(alignment.scope);
 };
 
 const getTooltipMarkerColor = (datum: DualAxisTrendDatum, fallback?: string) =>
@@ -941,6 +1040,7 @@ const buildDualAxisLineSpec = (
   showLegendFocusIcon = false,
   legendFocusIconColor?: string,
   showDateGranularityXAxis = false,
+  showSinglePeriodPoints = false,
 ): ICommonChartSpec => {
   const activeLegendNameSet = selectedLegendNames ? new Set(selectedLegendNames) : null;
   const visibleData = activeLegendNameSet
@@ -1062,8 +1162,8 @@ const buildDualAxisLineSpec = (
       { id: 'dualAxisRateData', values: rateData },
     ],
     series: [
-      buildDualAxisLineSeriesSpec('dualAxisPriceData', 'price'),
-      buildDualAxisLineSeriesSpec('dualAxisRateData', 'rate'),
+      buildDualAxisLineSeriesSpec('dualAxisPriceData', 'price', showSinglePeriodPoints),
+      buildDualAxisLineSeriesSpec('dualAxisRateData', 'rate', showSinglePeriodPoints),
     ],
     axes: axes as any,
     legends: [
@@ -1115,7 +1215,7 @@ const buildDualAxisLineSpec = (
               ...item,
               key: showMetricInTooltip
                 ? getComboMetricLineLabel(datum)
-                : `[${datum.billingUnit}×${datum.region}] ${getLineKindLabel(datum.lineKind)}`,
+                : `${getComboDimensionLabel(datum)}, ${getLineKindLabel(datum.lineKind)}`,
               value:
                 datum.axisValueType === 'rate'
                   ? `${datum.value.toFixed(1)}%`
@@ -1179,6 +1279,8 @@ const buildSingleAxisMetricLineSpec = (
   showLegendFocusIcon = false,
   legendFocusIconColor?: string,
   showDateGranularityXAxis = false,
+  tooltipAlignment?: TooltipAlignmentConfig,
+  showSinglePeriodPoints = false,
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
   const axisRange = getDynamicAxisRange(data, axisValueType);
@@ -1202,6 +1304,7 @@ const buildSingleAxisMetricLineSpec = (
         yField: 'value',
         seriesField: 'series',
         invalidType: 'link',
+        animationState: { duration: 0 },
         line: {
           style: {
             stroke: (datum: any) => datum.color,
@@ -1212,21 +1315,28 @@ const buildSingleAxisMetricLineSpec = (
         point: {
           visible: true,
           style: {
-            size: 0,
-            fill: (datum: any) => datum.color,
-            stroke: '#fff',
-            fillOpacity: 0,
-            strokeOpacity: 0,
-            lineWidth: 0,
+            size: showSinglePeriodPoints ? 10 : 0,
+            fill: (datum: any) => (datum.lineKind === 'target' ? '#fff' : datum.color),
+            stroke: (datum: any) => (datum.lineKind === 'target' ? datum.color : '#fff'),
+            fillOpacity: showSinglePeriodPoints ? 1 : 0,
+            strokeOpacity: showSinglePeriodPoints ? 1 : 0,
+            lineWidth: showSinglePeriodPoints ? 2 : 0,
+            lineDash: (datum: any) => (datum.lineKind === 'target' ? [3, 2] : [0, 0]),
           },
           state: {
             hover: {
               visible: true,
-              style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+              style: {
+                ...FINAL_HOVER_POINT_STYLE,
+                fill: (datum: any) => datum.color,
+              },
             },
             dimension_hover: {
               visible: true,
-              style: { size: 7, lineWidth: 1, fillOpacity: 1, strokeOpacity: 1 },
+              style: {
+                ...FINAL_HOVER_POINT_STYLE,
+                fill: (datum: any) => datum.color,
+              },
             },
           },
         },
@@ -1281,6 +1391,7 @@ const buildSingleAxisMetricLineSpec = (
         ? (tooltipElement: HTMLElement, actualTooltip: any) => {
             applyScrollableTooltipStyle(tooltipElement, tooltipMaxHeight);
             applyLineKindTooltipMarkerStyle(tooltipElement, actualTooltip);
+            applySplitTooltipAlignment(tooltipElement, tooltipAlignment);
           }
         : undefined,
       dimension: {
@@ -1424,7 +1535,7 @@ const buildLineSpec = (
       const entry = document.createElement('button');
       entry.type = 'button';
       entry.dataset.targetTrendTooltipDrill = 'true';
-      entry.textContent = '下钻[计费单元 × 大区]';
+      entry.textContent = '下钻计费单元|大区';
       entry.style.width = '100%';
       entry.style.marginTop = '8px';
       entry.style.padding = '8px 0 0';
@@ -1481,14 +1592,14 @@ const showOnlyLegendItem = (chart: IVChart | null | undefined, event: any) => {
 
 function LineKindLegend() {
   return (
-    <div className={styles.lineKindLegend} aria-label="实际值与目标值图例">
+    <div className={styles.lineKindLegend} aria-label="实际与目标图例">
       <div className={styles.legendItem}>
         <span className={styles.legendLine} />
-        <span>实际值</span>
+        <span>实际</span>
       </div>
       <div className={styles.legendItem}>
         <span className={`${styles.legendLine} ${styles.legendLineDashed}`} />
-        <span>目标值</span>
+        <span>目标</span>
       </div>
     </div>
   );
@@ -1574,11 +1685,11 @@ function MetricChartCard({
           <>
             <div className={styles.legendItem}>
               <span className={styles.legendLine} style={{ borderTopColor: '#1664FF' }} />
-              <span>实际值</span>
+              <span>实际</span>
             </div>
             <div className={styles.legendItem}>
               <span className={`${styles.legendLine} ${styles.legendLineDashed}`} />
-              <span>目标值</span>
+              <span>目标</span>
             </div>
           </>
         )}
@@ -1656,7 +1767,7 @@ function SchemeTwoChart({
           <div className={styles.chartTitleBlock}>
             <div className={styles.chartTitleRow}>
               <div className={styles.chartTitle}>
-                {drilledMetricConfig ? `${drilledMetricConfig.name}：计费单元 × 大区拆分` : '指标达标率趋势'}
+                {drilledMetricConfig ? `${drilledMetricConfig.name}：计费单元|大区拆分` : '指标达标率趋势'}
               </div>
               {drilledMetricConfig && <LineKindLegend />}
             </div>
@@ -1719,7 +1830,8 @@ function SchemeThreeChart({
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [timeWindow, setTimeWindow] = useState('last6Months');
 
-  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
+  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : [timeWindow]), [timeWindow]);
+  const showSinglePeriodPoints = selectedPeriods.length === 1;
   const chartData = useMemo(
     () =>
       buildDualAxisTrendData(selectedBillingUnits, selectedRegions, selectedMetrics, 'comboMetric').filter((item) =>
@@ -1728,8 +1840,23 @@ function SchemeThreeChart({
     [selectedBillingUnits, selectedMetrics, selectedPeriods, selectedRegions],
   );
   const spec = useMemo(
-    () => buildDualAxisLineSpec(chartData, colorText2, colorText3, colorBorder2, 'comboMetric', true, 438, tooltipMode),
-    [chartData, colorBorder2, colorText2, colorText3, tooltipMode],
+    () =>
+      buildDualAxisLineSpec(
+        chartData,
+        colorText2,
+        colorText3,
+        colorBorder2,
+        'comboMetric',
+        true,
+        438,
+        tooltipMode,
+        undefined,
+        false,
+        undefined,
+        false,
+        showSinglePeriodPoints,
+      ),
+    [chartData, colorBorder2, colorText2, colorText3, showSinglePeriodPoints, tooltipMode],
   );
   const clearLockedTooltip = useCallback(() => {
     setLockedTooltipPeriod(null);
@@ -1863,10 +1990,12 @@ function SchemeFourChart() {
   const [draggingMetricKey, setDraggingMetricKey] = useState<MetricKey | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
   const [lockedTooltip, setLockedTooltip] = useState<{ metricKey: MetricKey; period: string } | null>(null);
+  const lockedTooltipRef = useRef<{ metricKey: MetricKey; period: string } | null>(null);
   const [legendFocusTooltip, setLegendFocusTooltip] = useState<{ x: number; y: number } | null>(null);
   const draggingMetricKeyRef = useRef<MetricKey | null>(null);
 
-  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : PERIODS), [timeWindow]);
+  const selectedPeriods = useMemo(() => (timeWindow === 'last6Months' ? PERIODS : [timeWindow]), [timeWindow]);
+  const showSinglePeriodPoints = selectedPeriods.length === 1;
   const isMultipleMode = viewMode === 'multiple';
   const orderedSelectedMetrics = useMemo(
     () => metricOrder.filter((metricKey) => selectedMetrics.includes(metricKey)),
@@ -1911,8 +2040,17 @@ function SchemeFourChart() {
         true,
         colorFunctionalIcon1,
         true,
+        showSinglePeriodPoints,
       ),
-    [colorFunctionalIcon1, overviewChartData, colorBorder2, colorText2, colorText3, selectedOverviewLegendNames],
+    [
+      colorFunctionalIcon1,
+      overviewChartData,
+      colorBorder2,
+      colorText2,
+      colorText3,
+      selectedOverviewLegendNames,
+      showSinglePeriodPoints,
+    ],
   );
   const splitChartItems = useMemo(
     () =>
@@ -1927,16 +2065,27 @@ function SchemeFourChart() {
             colorText2,
             colorText3,
             colorBorder2,
-            FINAL_SCHEME_TOOLTIP_MAX_HEIGHT,
+            FINAL_SCHEME_SPLIT_TOOLTIP_MAX_HEIGHT,
             true,
             colorFunctionalIcon1,
             true,
+            { scope: 'target-final-split', metricKey: metric.key },
+            showSinglePeriodPoints,
           ),
         };
       }),
-    [colorBorder2, colorFunctionalIcon1, colorText2, colorText3, orderedSelectedMetrics, splitChartData],
+    [
+      colorBorder2,
+      colorFunctionalIcon1,
+      colorText2,
+      colorText3,
+      orderedSelectedMetrics,
+      showSinglePeriodPoints,
+      splitChartData,
+    ],
   );
   const clearLockedTooltip = useCallback(() => {
+    lockedTooltipRef.current = null;
     setLockedTooltip(null);
     Object.values(splitChartRefs.current).forEach((chart) => {
       chart?.hideTooltip();
@@ -1988,12 +2137,14 @@ function SchemeFourChart() {
     if (!period) return;
 
     const nextPeriod = String(period);
-    setLockedTooltip({ metricKey, period: nextPeriod });
+    const nextLockedTooltip = { metricKey, period: nextPeriod };
+    lockedTooltipRef.current = nextLockedTooltip;
+    setLockedTooltip(nextLockedTooltip);
     syncSplitTooltip(nextPeriod);
   }, [syncSplitTooltip]);
   const handleSplitDimensionHover = useCallback(
     (event: any) => {
-      if (lockedTooltip) return;
+      if (lockedTooltipRef.current) return;
 
       const period = event?.dimensionInfo?.[0]?.value;
       if (event?.action === 'leave' || !period) {
@@ -2003,7 +2154,7 @@ function SchemeFourChart() {
 
       syncSplitTooltip(String(period));
     },
-    [clearLockedTooltip, lockedTooltip, syncSplitTooltip],
+    [clearLockedTooltip, syncSplitTooltip],
   );
   const moveFacetChart = useCallback((sourceMetricKey: MetricKey, event: any) => {
     const point = getClientPointFromVChartEvent(event);
@@ -2142,7 +2293,7 @@ function SchemeFourChart() {
   return (
     <div className={styles.schemeStack} ref={containerRef}>
       <div className={styles.compactRuleText}>
-        默认单图聚合，不管选择几个计费单元和几个大区都全部展示在一张图中；切换多图拆分后，按指标一图展示计费单元 × 大区粒度。
+        默认单图聚合，不管选择几个计费单元和几个大区都全部展示在一张图中；切换多图拆分后，按指标一图展示计费单元|大区粒度。
       </div>
 
       <div className={styles.dualAxisOuterToolbar}>
@@ -2215,6 +2366,8 @@ function SchemeFourChart() {
                     key={metric.key}
                     className={`${styles.dualAxisPanel} ${styles.dualAxisDraggablePanel}`}
                     data-scheme-four-metric-key={metric.key}
+                    data-target-trend-tooltip-anchor-scope="target-final-split"
+                    data-target-trend-tooltip-anchor-metric-key={metric.key}
                   >
                     <div
                       className={`${styles.focusHeader} ${styles.dualAxisDragHeader}`}
@@ -2246,7 +2399,7 @@ function SchemeFourChart() {
                       onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
                       onPointerLeave={() => {
                         hideLegendFocusTooltip();
-                        if (!lockedTooltip) {
+                        if (!lockedTooltipRef.current) {
                           clearLockedTooltip();
                         }
                       }}
@@ -2417,7 +2570,7 @@ const TargetTrendChartSchemes: React.FC = () => {
                 </div>
                 <div>
                   <div className={styles.ruleTitle}>下钻层级</div>
-                  <div className={styles.ruleText}>点击图表右上角下钻后，按计费单元 × 大区展开；同对象同色，实际值实线，目标值虚线。</div>
+                  <div className={styles.ruleText}>点击图表右上角下钻后，按计费单元|大区展开；同对象同色，实际值实线，目标值虚线。</div>
                 </div>
               </div>
             </Card>
@@ -2445,7 +2598,7 @@ const TargetTrendChartSchemes: React.FC = () => {
                 </div>
                 <div>
                   <div className={styles.ruleTitle}>下钻层级</div>
-                  <div className={styles.ruleText}>点击指标折线后，按计费单元 × 大区展开；同对象同色，实际值实线，目标值虚线。</div>
+                  <div className={styles.ruleText}>点击指标折线后，按计费单元|大区展开；同对象同色，实际值实线，目标值虚线。</div>
                 </div>
               </div>
             </Card>
