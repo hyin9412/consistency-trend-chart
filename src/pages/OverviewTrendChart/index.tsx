@@ -96,7 +96,6 @@ const CHART_Y_AXIS_TICK_COUNT = 5;
 const SINGLE_PERIOD_POINT_SIZE = 10;
 const SINGLE_PERIOD_TARGET_POINT_SIZE = 8;
 const TOOLTIP_MARKER_SIZE = 10;
-const TOOLTIP_MARKER_RADIUS = 1.54;
 const getYAxisLabelConfig = (colorText3: string): NonNullable<ICartesianAxisSpec['label']> => ({
   visible: true,
   space: 4,
@@ -629,10 +628,10 @@ const getTooltipMarkerColor = (datum: ProductTrendDatum, fallback?: string) => {
 const renderTooltipLineKindMarker = (datum: ProductTrendDatum, fallbackColor?: string) => {
   const color = getTooltipMarkerColor(datum, fallbackColor);
   if (datum.lineKind === 'target') {
-    return `<span style="display: inline-block; width: ${TOOLTIP_MARKER_SIZE}px; height: 2px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: 99px; background: repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 5px); vertical-align: middle;"></span>`;
+    return `<span style="display: block; width: ${TOOLTIP_MARKER_SIZE}px; height: 2px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: 99px; background: repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 5px);"></span>`;
   }
 
-  return `<span style="display: inline-block; width: ${TOOLTIP_MARKER_SIZE}px; height: ${TOOLTIP_MARKER_SIZE}px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: ${TOOLTIP_MARKER_RADIUS}px; background: ${color}; vertical-align: middle;"></span>`;
+  return `<span style="display: block; width: ${TOOLTIP_MARKER_SIZE}px; height: 2px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: 99px; background: ${color};"></span>`;
 };
 
 const applyLineKindTooltipMarkerStyle = (tooltipElement: HTMLElement, actualTooltip: ITooltipActual) => {
@@ -646,6 +645,11 @@ const applyLineKindTooltipMarkerStyle = (tooltipElement: HTMLElement, actualTool
     const shapeRow = shapeRows[index];
     if (!datum || !shapeRow) return;
 
+    shapeRow.style.display = 'flex';
+    shapeRow.style.alignItems = 'center';
+    shapeRow.style.justifyContent = 'center';
+    shapeRow.style.height = `${TOOLTIP_BODY_LINE_HEIGHT}px`;
+    shapeRow.style.lineHeight = `${TOOLTIP_BODY_LINE_HEIGHT}px`;
     shapeRow.innerHTML = renderTooltipLineKindMarker(datum, item.shapeStroke || item.shapeFill);
   });
 };
@@ -835,7 +839,7 @@ const renderProductTooltipTable = (tooltipElement: HTMLElement, actualTooltip: I
               (datum) => `
                 <tr>
                   <td style="padding: 7px 12px 7px 0; border-bottom: 1px solid var(--color-border-1, #f2f3f5); color: var(--color-text-3, #86909c); font-family: Roboto, 'PingFang SC', sans-serif; font-size: 12px; line-height: 20px; font-weight: 400; white-space: normal; overflow-wrap: anywhere;">
-                    <span style="display: inline-flex; align-items: center; gap: 3.6px; min-width: 0;">
+                    <span style="display: flex; align-items: center; gap: 3.6px; min-width: 0; height: 20px; line-height: 20px;">
                       ${renderTooltipLineKindMarker(datum)}
                       <span style="min-width: 0; overflow-wrap: anywhere;">${getProductMetricLineLabel(datum)}</span>
                     </span>
