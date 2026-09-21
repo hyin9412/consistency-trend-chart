@@ -173,7 +173,7 @@
 .legendItem {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 3.6px;
   padding: 0;
   border: none;
   background: transparent;
@@ -192,8 +192,8 @@
 }
 
 .legendMarker {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 1.71px;
   flex: 0 0 auto;
 }

@@ -11,6 +11,7 @@ import type {
   IVChart,
 } from '@visactor/vchart';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import CustomPagedLegend, { type CustomPagedLegendItem } from 'components/CustomPagedLegend';
 import styles from './index.module.scss';
 
 type OverviewSchemeKey = 'archive' | 'final';
@@ -71,6 +72,7 @@ interface DragPreviewState {
 interface TooltipAlignmentConfig {
   scope: string;
   metricKey: MetricKey;
+  alignSinglePointSide?: boolean;
 }
 
 type LegendSpecWithPadding = IDiscreteLegendSpec & {
@@ -88,6 +90,20 @@ const FINAL_SCHEME_TOOLTIP_MAX_HEIGHT = 420;
 const FINAL_SCHEME_SPLIT_TOOLTIP_MAX_HEIGHT = 264;
 const FINAL_SCHEME_TOOLTIP_MAX_WIDTH = 500;
 const TOOLTIP_ROW_ALIGNMENT_TOLERANCE = 8;
+const SINGLE_POINT_TOOLTIP_GAP = 12;
+const SINGLE_POINT_TOOLTIP_VIEWPORT_PADDING = 8;
+const CHART_Y_AXIS_TICK_COUNT = 5;
+const SINGLE_PERIOD_POINT_SIZE = 10;
+const SINGLE_PERIOD_TARGET_POINT_SIZE = 8;
+const TOOLTIP_MARKER_SIZE = 10;
+const TOOLTIP_MARKER_RADIUS = 1.54;
+const getYAxisLabelConfig = (colorText3: string): NonNullable<ICartesianAxisSpec['label']> => ({
+  visible: true,
+  space: 4,
+  firstVisible: true,
+  lastVisible: true,
+  style: { fill: colorText3, textBaseline: 'middle' },
+});
 const FINAL_HOVER_POINT_STYLE = {
   size: 10,
   symbolType: 'circle',
@@ -96,6 +112,10 @@ const FINAL_HOVER_POINT_STYLE = {
   fillOpacity: 1,
   strokeOpacity: 1,
   lineDash: [0, 0],
+};
+const getSinglePeriodPointSize = (showSinglePeriodPoints: boolean, lineKind?: LineKind) => {
+  if (!showSinglePeriodPoints) return 0;
+  return lineKind === 'target' ? SINGLE_PERIOD_TARGET_POINT_SIZE : SINGLE_PERIOD_POINT_SIZE;
 };
 const PRODUCT_CHART_COLOR_PALETTE = [
   '#1664FF',
@@ -302,9 +322,10 @@ const formatCnyValue = (value: number) => {
   return value.toFixed(3);
 };
 
-const formatPeriodToDateGranularity = (value: string | string[]) => {
+const formatPeriodToDateGranularity = (value: unknown) => {
   const rawValue = String(Array.isArray(value) ? value[0] : value);
-  return /^\d{4}-\d{2}$/.test(rawValue) ? `${rawValue}-01` : rawValue;
+  const monthMatch = rawValue.match(/^(\d{4}-\d{2})(?:-\d{2})?$/);
+  return monthMatch ? monthMatch[1] : rawValue;
 };
 
 const getLineKindLabel = (lineKind: LineKind) => (lineKind === 'actual' ? '实际值' : '目标值');
@@ -414,6 +435,22 @@ const asProductTrendDatum = (datum: Datum | undefined): ProductTrendDatum | unde
 
 const getProductFactor = (product: ProductConfig, periodIndex: number, metricIndex: number) =>
   1 + product.delta + Math.sin((periodIndex + 1) * (metricIndex + 1.4) + product.delta * 10) * 0.018;
+
+const getNiceAxisStep = (range: number) => {
+  if (range <= 0) return 1;
+
+  const roughStep = range / Math.max(CHART_Y_AXIS_TICK_COUNT - 1, 1);
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalizedStep = roughStep / magnitude;
+
+  if (normalizedStep <= 1) return magnitude;
+  if (normalizedStep <= 2) return 2 * magnitude;
+  if (normalizedStep <= 2.5) return 2.5 * magnitude;
+  if (normalizedStep <= 5) return 5 * magnitude;
+  return 10 * magnitude;
+};
+
+const normalizeAxisValue = (value: number) => Number(value.toPrecision(12));
 
 const getBillingRegionFactor = (billingUnit: string, region: string, periodIndex: number) => {
   const billingIndex = BILLING_UNIT_OPTIONS.findIndex((option) => option.value === billingUnit);
@@ -569,10 +606,13 @@ const getDynamicAxisRange = (data: ProductTrendDatum[], axisValueType: AxisValue
   const span = maxValue - minValue;
   const fallbackPadding = axisValueType === 'rate' ? 1 : Math.max(Math.abs(maxValue) * 0.08, 0.01);
   const padding = span > 0 ? span * 0.12 : fallbackPadding;
+  const paddedMin = Math.max(0, minValue - padding);
+  const paddedMax = maxValue + padding;
+  const niceStep = getNiceAxisStep(paddedMax - paddedMin);
 
   return {
-    min: Math.max(0, minValue - padding),
-    max: maxValue + padding,
+    min: normalizeAxisValue(Math.max(0, Math.floor(paddedMin / niceStep) * niceStep)),
+    max: normalizeAxisValue(Math.ceil(paddedMax / niceStep) * niceStep),
   };
 };
 
@@ -589,10 +629,10 @@ const getTooltipMarkerColor = (datum: ProductTrendDatum, fallback?: string) => {
 const renderTooltipLineKindMarker = (datum: ProductTrendDatum, fallbackColor?: string) => {
   const color = getTooltipMarkerColor(datum, fallbackColor);
   if (datum.lineKind === 'target') {
-    return `<span style="display: inline-block; width: 10px; height: 2px; flex: 0 0 auto; border-radius: 99px; background: repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 5px); vertical-align: middle;"></span>`;
+    return `<span style="display: inline-block; width: ${TOOLTIP_MARKER_SIZE}px; height: 2px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: 99px; background: repeating-linear-gradient(90deg, ${color} 0 3px, transparent 3px 5px); vertical-align: middle;"></span>`;
   }
 
-  return `<span style="display: inline-block; width: 10px; height: 10px; flex: 0 0 auto; border-radius: 2px; background: ${color}; vertical-align: middle;"></span>`;
+  return `<span style="display: inline-block; width: ${TOOLTIP_MARKER_SIZE}px; height: ${TOOLTIP_MARKER_SIZE}px; flex: 0 0 ${TOOLTIP_MARKER_SIZE}px; border-radius: ${TOOLTIP_MARKER_RADIUS}px; background: ${color}; vertical-align: middle;"></span>`;
 };
 
 const applyLineKindTooltipMarkerStyle = (tooltipElement: HTMLElement, actualTooltip: ITooltipActual) => {
@@ -644,12 +684,45 @@ const findTooltipAnchorElement = (scope: string, metricKey: string) =>
     document.querySelectorAll<HTMLElement>(`[data-target-trend-tooltip-anchor-scope="${scope}"]`),
   ).find((element) => element.dataset.targetTrendTooltipAnchorMetricKey === metricKey);
 
+type SplitTooltipAlignmentItem = {
+  tooltipElement: HTMLElement;
+  tooltipTop: number;
+  tooltipLeft: number;
+  tooltipWidth: number;
+  anchorTop: number;
+  anchorLeft: number;
+  anchorWidth: number;
+  alignSinglePointSide: boolean;
+};
+
+const getSinglePointTooltipSide = (items: SplitTooltipAlignmentItem[]) => {
+  const viewportRight = window.innerWidth - SINGLE_POINT_TOOLTIP_VIEWPORT_PADDING;
+  const getOverflow = (side: 'left' | 'right') =>
+    items.reduce((total, { tooltipWidth, anchorLeft, anchorWidth }) => {
+      const hoverLineX = anchorLeft + anchorWidth / 2;
+      const nextLeft =
+        side === 'left'
+          ? hoverLineX - tooltipWidth - SINGLE_POINT_TOOLTIP_GAP
+          : hoverLineX + SINGLE_POINT_TOOLTIP_GAP;
+      const nextRight = nextLeft + tooltipWidth;
+
+      return (
+        total +
+        Math.max(0, SINGLE_POINT_TOOLTIP_VIEWPORT_PADDING - nextLeft) +
+        Math.max(0, nextRight - viewportRight)
+      );
+    }, 0);
+
+  return getOverflow('left') <= getOverflow('right') ? 'left' : 'right';
+};
+
 const alignSplitTooltipRows = (scope: string) => {
   window.requestAnimationFrame(() => {
-    const rows: Array<Array<{ tooltipElement: HTMLElement; tooltipTop: number; anchorTop: number }>> = [];
+    const rows: Array<Array<SplitTooltipAlignmentItem>> = [];
 
     getVisibleAlignedTooltipElements(scope).forEach((tooltipElement) => {
       tooltipElement.style.marginTop = '';
+      tooltipElement.style.marginLeft = '';
 
       const metricKey = tooltipElement.dataset.targetTrendTooltipAlignMetricKey;
       if (!metricKey) return;
@@ -657,12 +730,23 @@ const alignSplitTooltipRows = (scope: string) => {
       const anchorElement = findTooltipAnchorElement(scope, metricKey);
       if (!anchorElement) return;
 
-      const anchorTop = anchorElement.getBoundingClientRect().top;
-      const tooltipTop = tooltipElement.getBoundingClientRect().top;
+      const anchorRect = anchorElement.getBoundingClientRect();
+      const tooltipRect = tooltipElement.getBoundingClientRect();
+      const anchorTop = anchorRect.top;
+      const tooltipTop = tooltipRect.top;
       const existingRow = rows.find((row) =>
         row.some((item) => Math.abs(item.anchorTop - anchorTop) <= TOOLTIP_ROW_ALIGNMENT_TOLERANCE),
       );
-      const rowItem = { tooltipElement, tooltipTop, anchorTop };
+      const rowItem = {
+        tooltipElement,
+        tooltipTop,
+        tooltipLeft: tooltipRect.left,
+        tooltipWidth: tooltipRect.width,
+        anchorTop,
+        anchorLeft: anchorRect.left,
+        anchorWidth: anchorRect.width,
+        alignSinglePointSide: tooltipElement.dataset.targetTrendTooltipAlignSinglePointSide === 'true',
+      };
 
       if (existingRow) {
         existingRow.push(rowItem);
@@ -671,12 +755,28 @@ const alignSplitTooltipRows = (scope: string) => {
       }
     });
 
-    rows.forEach((row) => {
-      if (row.length < 2) return;
+    const singlePointItems = rows.flat().filter((item) => item.alignSinglePointSide);
+    const singlePointTooltipSide = getSinglePointTooltipSide(singlePointItems);
 
-      const alignedTop = Math.min(...row.map((item) => item.tooltipTop));
-      row.forEach(({ tooltipElement, tooltipTop }) => {
-        tooltipElement.style.marginTop = `${alignedTop - tooltipTop}px`;
+    rows.forEach((row) => {
+      if (row.length >= 2) {
+        const alignedTop = Math.min(...row.map((item) => item.tooltipTop));
+        row.forEach(({ tooltipElement, tooltipTop }) => {
+          tooltipElement.style.marginTop = `${alignedTop - tooltipTop}px`;
+        });
+      }
+
+      row.forEach(({ tooltipElement, tooltipLeft, tooltipWidth, anchorLeft, anchorWidth }) => {
+        if (tooltipElement.dataset.targetTrendTooltipAlignSinglePointSide !== 'true') return;
+
+        const hoverLineX = anchorLeft + anchorWidth / 2;
+        const preferredLeft =
+          singlePointTooltipSide === 'left'
+            ? hoverLineX - tooltipWidth - SINGLE_POINT_TOOLTIP_GAP
+            : hoverLineX + SINGLE_POINT_TOOLTIP_GAP;
+        const maxLeft = window.innerWidth - tooltipWidth - SINGLE_POINT_TOOLTIP_VIEWPORT_PADDING;
+        const nextLeft = Math.min(Math.max(SINGLE_POINT_TOOLTIP_VIEWPORT_PADDING, preferredLeft), maxLeft);
+        tooltipElement.style.marginLeft = `${nextLeft - tooltipLeft}px`;
       });
     });
   });
@@ -687,6 +787,7 @@ const applySplitTooltipAlignment = (tooltipElement: HTMLElement, alignment?: Too
 
   tooltipElement.dataset.targetTrendTooltipAlignScope = alignment.scope;
   tooltipElement.dataset.targetTrendTooltipAlignMetricKey = alignment.metricKey;
+  tooltipElement.dataset.targetTrendTooltipAlignSinglePointSide = alignment.alignSinglePointSide ? 'true' : 'false';
   alignSplitTooltipRows(alignment.scope);
 };
 
@@ -713,7 +814,7 @@ const renderProductTooltipTable = (tooltipElement: HTMLElement, actualTooltip: I
 
   if (!tableRows.length) return;
 
-  const title = `${actualTooltip.title?.value ?? actualTooltip.title?.key ?? ''}`.trim();
+  const title = formatPeriodToDateGranularity(`${actualTooltip.title?.value ?? actualTooltip.title?.key ?? ''}`.trim());
   tooltipElement.innerHTML = `
     <div style="width: max-content; max-width: ${FINAL_SCHEME_TOOLTIP_MAX_WIDTH}px; color: var(--color-text-1, #1d2129); font-family: Roboto, 'PingFang SC', sans-serif;">
       ${
@@ -734,7 +835,7 @@ const renderProductTooltipTable = (tooltipElement: HTMLElement, actualTooltip: I
               (datum) => `
                 <tr>
                   <td style="padding: 7px 12px 7px 0; border-bottom: 1px solid var(--color-border-1, #f2f3f5); color: var(--color-text-3, #86909c); font-family: Roboto, 'PingFang SC', sans-serif; font-size: 12px; line-height: 20px; font-weight: 400; white-space: normal; overflow-wrap: anywhere;">
-                    <span style="display: inline-flex; align-items: center; gap: 8px; min-width: 0;">
+                    <span style="display: inline-flex; align-items: center; gap: 3.6px; min-width: 0;">
                       ${renderTooltipLineKindMarker(datum)}
                       <span style="min-width: 0; overflow-wrap: anywhere;">${getProductMetricLineLabel(datum)}</span>
                     </span>
@@ -833,6 +934,15 @@ const buildProductLegendSpec = (
   padding: [8, 0, 0, 0],
 });
 
+const buildProductCustomLegendItems = (
+  data: ProductTrendDatum[],
+  legendMode: ProductLegendMode,
+): CustomPagedLegendItem[] =>
+  Array.from(new Map(data.map((item) => [getProductLegendName(item, legendMode), item.color]))).map(([name, color]) => ({
+    name,
+    color,
+  }));
+
 const buildMetricChartSpec = (
   metric: MetricConfig,
   data: ProductTrendDatum[],
@@ -842,16 +952,54 @@ const buildMetricChartSpec = (
   colorFunctionalIcon1: string,
   showSinglePeriodPoints = false,
   tooltipAlignment?: TooltipAlignmentConfig,
+  selectedLegendNames?: string[] | null,
+  hideLegend = false,
 ): ICommonChartSpec => {
   const axisValueType = getMetricAxisValueType(metric);
-  const axisRange = getDynamicAxisRange(data, axisValueType);
+  const activeLegendNameSet = selectedLegendNames ? new Set(selectedLegendNames) : null;
+  const visibleData = activeLegendNameSet
+    ? data.filter((item) => activeLegendNameSet.has(getProductLegendName(item, 'productDimension')))
+    : data;
+  const axisRange = getDynamicAxisRange(visibleData, axisValueType);
+  const legendItems = buildProductCustomLegendItems(data, 'productDimension');
+  const axes: ICartesianAxisSpec[] = [
+    {
+      orient: 'bottom',
+      type: 'band',
+      label: {
+        visible: true,
+        space: 2,
+        style: { fill: colorText3 },
+        formatMethod: formatPeriodToDateGranularity,
+      },
+      title: { visible: false },
+    },
+    {
+      orient: 'left',
+      type: 'linear',
+      min: axisRange.min,
+      max: axisRange.max,
+      nice: false,
+      sampling: false,
+      tick: { forceTickCount: CHART_Y_AXIS_TICK_COUNT },
+      label: {
+        ...getYAxisLabelConfig(colorText3),
+        formatMethod: (value: string | string[]) => {
+          const rawValue = Number(Array.isArray(value) ? value[0] : value);
+          return axisValueType === 'rate' ? `${rawValue.toFixed(0)}%` : formatCnyValue(rawValue);
+        },
+      },
+      grid: { visible: true, style: { stroke: colorBorder2, lineDash: [4, 3], lineWidth: 1 } },
+      title: { visible: false },
+    },
+  ];
 
   return {
     type: 'common',
     autoFit: true,
     background: '#fff',
     padding: { top: 8, right: 8, bottom: 0, left: 4 },
-    data: [{ id: `${metric.key}Data`, values: data }],
+    data: [{ id: `${metric.key}Data`, values: visibleData }],
     series: [
       {
         id: `${metric.key}Series`,
@@ -872,7 +1020,7 @@ const buildMetricChartSpec = (
         point: {
           visible: true,
           style: {
-            size: showSinglePeriodPoints ? 10 : 0,
+            size: (datum: Datum) => getSinglePeriodPointSize(showSinglePeriodPoints, asProductTrendDatum(datum)?.lineKind),
             symbolType: 'circle',
             fill: (datum: Datum) => {
               const trendDatum = asProductTrendDatum(datum);
@@ -909,47 +1057,10 @@ const buildMetricChartSpec = (
         },
       },
     ],
-    axes: [
-      {
-        orient: 'bottom',
-        type: 'band',
-        label: {
-          visible: true,
-          space: 2,
-          style: { fill: colorText3 },
-          formatMethod: formatPeriodToDateGranularity,
-        },
-        title: { visible: false },
-      },
-      {
-        orient: 'left',
-        type: 'linear',
-        min: axisRange.min,
-        max: axisRange.max,
-        label: {
-          visible: true,
-          space: 4,
-          style: { fill: colorText3 },
-          formatMethod: (value: string | string[]) => {
-            const rawValue = Number(Array.isArray(value) ? value[0] : value);
-            return axisValueType === 'rate' ? `${rawValue.toFixed(0)}%` : formatCnyValue(rawValue);
-          },
-        },
-        grid: { visible: true, style: { stroke: colorBorder2, lineDash: [4, 3], lineWidth: 1 } },
-        title: { visible: false },
-      },
-    ],
-    legends: [
-      buildProductLegendSpec(
-        colorText2,
-        colorText3,
-        colorFunctionalIcon1,
-        Array.from(new Map(data.map((item) => [getProductDimensionLabel(item), item.color]))).map(
-          ([name, color]) => ({ name, color }),
-        ),
-        'productDimension',
-      ),
-    ],
+    axes,
+    legends: hideLegend
+      ? { visible: false }
+      : [buildProductLegendSpec(colorText2, colorText3, colorFunctionalIcon1, legendItems, 'productDimension')],
     tooltip: {
       renderMode: 'html',
       enterable: true,
@@ -962,6 +1073,10 @@ const buildMetricChartSpec = (
       dimension: {
         shapeType: 'square',
         shapeSize: 10,
+        updateTitle: (title: ITooltipActual['title']) => ({
+          ...title,
+          value: formatPeriodToDateGranularity(title?.value ?? title?.key ?? ''),
+        }),
         updateContent: (items: ITooltipLineActual[] = []) =>
           items
             .map((item) => {
@@ -1017,7 +1132,7 @@ const buildMetricChartSpec = (
           fill: colorText2,
           textBaseline: 'middle',
         },
-        shape: { size: 10, spacing: 8 },
+        shape: { size: 10, spacing: 3.6 },
         spaceRow: 2,
       },
     },
@@ -1055,7 +1170,7 @@ const buildProductLineSeriesSpec = (
   point: {
     visible: true,
     style: {
-      size: showSinglePeriodPoints ? 10 : 0,
+      size: (datum: Datum) => getSinglePeriodPointSize(showSinglePeriodPoints, asProductTrendDatum(datum)?.lineKind),
       symbolType: 'circle',
       fill: (datum: Datum) => {
         const trendDatum = asProductTrendDatum(datum);
@@ -1100,6 +1215,7 @@ const buildFinalOverviewChartSpec = (
   colorFunctionalIcon1: string,
   selectedLegendNames?: string[] | null,
   showSinglePeriodPoints = false,
+  hideLegend = false,
 ): ICommonChartSpec => {
   const activeLegendNameSet = selectedLegendNames ? new Set(selectedLegendNames) : null;
   const visibleData = activeLegendNameSet
@@ -1116,9 +1232,7 @@ const buildFinalOverviewChartSpec = (
   const priceAxisRange = getDynamicAxisRange(visiblePriceData, 'price');
   const rateAxisRange = getDynamicAxisRange(visibleRateData, 'rate');
   const singleAxisRange = singleAxisValueType === 'rate' ? rateAxisRange : priceAxisRange;
-  const legendItems = Array.from(
-    new Map(data.map((item) => [getProductMetricGroupLabel(item), item.color])),
-  ).map(([name, color]) => ({ name, color }));
+  const legendItems = buildProductCustomLegendItems(data, 'productMetricGroup');
   const axes: ICartesianAxisSpec[] = [
     {
       orient: 'bottom',
@@ -1140,10 +1254,11 @@ const buildFinalOverviewChartSpec = (
             seriesId: ['priceSeries'],
             min: priceAxisRange.min,
             max: priceAxisRange.max,
+            nice: false,
+            sampling: false,
+            tick: { forceTickCount: CHART_Y_AXIS_TICK_COUNT },
             label: {
-              visible: true,
-              space: 4,
-              style: { fill: colorText3 },
+              ...getYAxisLabelConfig(colorText3),
               formatMethod: (value: string | string[]) =>
                 formatCnyValue(Number(Array.isArray(value) ? value[0] : value)),
             },
@@ -1156,11 +1271,12 @@ const buildFinalOverviewChartSpec = (
             type: 'linear' as const,
             min: rateAxisRange.min,
             max: rateAxisRange.max,
+            nice: false,
             seriesId: ['rateSeries'],
+            sampling: false,
+            tick: { forceTickCount: CHART_Y_AXIS_TICK_COUNT },
             label: {
-              visible: true,
-              space: 4,
-              style: { fill: colorText3 },
+              ...getYAxisLabelConfig(colorText3),
               formatMethod: (value: string | string[]) =>
                 `${Number(Array.isArray(value) ? value[0] : value).toFixed(0)}%`,
             },
@@ -1176,10 +1292,11 @@ const buildFinalOverviewChartSpec = (
             seriesId: [singleAxisValueType === 'rate' ? 'rateSeries' : 'priceSeries'],
             min: singleAxisRange.min,
             max: singleAxisRange.max,
+            nice: false,
+            sampling: false,
+            tick: { forceTickCount: CHART_Y_AXIS_TICK_COUNT },
             label: {
-              visible: true,
-              space: 4,
-              style: { fill: colorText3 },
+              ...getYAxisLabelConfig(colorText3),
               formatMethod: (value: string | string[]) => {
                 const rawValue = Number(Array.isArray(value) ? value[0] : value);
                 return singleAxisValueType === 'rate' ? `${rawValue.toFixed(0)}%` : formatCnyValue(rawValue);
@@ -1197,24 +1314,26 @@ const buildFinalOverviewChartSpec = (
     background: '#fff',
     padding: { top: 8, right: 8, bottom: 0, left: 4 },
     data: [
-      { id: 'overviewPriceData', values: priceData },
-      { id: 'overviewRateData', values: rateData },
+      { id: 'overviewPriceData', values: visiblePriceData },
+      { id: 'overviewRateData', values: visibleRateData },
     ],
     series: [
       buildProductLineSeriesSpec('overviewPriceData', 'price', showSinglePeriodPoints),
       buildProductLineSeriesSpec('overviewRateData', 'rate', showSinglePeriodPoints),
     ],
     axes,
-    legends: [
-      buildProductLegendSpec(
-        colorText2,
-        colorText3,
-        colorFunctionalIcon1,
-        legendItems,
-        'productMetricGroup',
-        selectedLegendNames,
-      ),
-    ],
+    legends: hideLegend
+      ? { visible: false }
+      : [
+          buildProductLegendSpec(
+            colorText2,
+            colorText3,
+            colorFunctionalIcon1,
+            legendItems,
+            'productMetricGroup',
+            selectedLegendNames,
+          ),
+        ],
     tooltip: {
       renderMode: 'html',
       enterable: true,
@@ -1225,6 +1344,10 @@ const buildFinalOverviewChartSpec = (
       dimension: {
         shapeType: 'square',
         shapeSize: 10,
+        updateTitle: (title: ITooltipActual['title']) => ({
+          ...title,
+          value: formatPeriodToDateGranularity(title?.value ?? title?.key ?? ''),
+        }),
         updateContent: (items: ITooltipLineActual[] = []) =>
           [...items]
             .sort((left, right) => {
@@ -1282,7 +1405,7 @@ const buildFinalOverviewChartSpec = (
           fill: colorText2,
           textBaseline: 'middle',
         },
-        shape: { size: 10, spacing: 8 },
+        shape: { size: 10, spacing: 3.6 },
         spaceRow: 2,
       },
     },
@@ -1440,6 +1563,7 @@ function FinalOverviewTrendChart() {
   const [timeWindow, setTimeWindow] = useState('2026-08');
   const [viewMode, setViewMode] = useState<FinalViewMode>('multiple');
   const [selectedOverviewLegendNames, setSelectedOverviewLegendNames] = useState<string[] | null>(null);
+  const [selectedSplitLegendNames, setSelectedSplitLegendNames] = useState<Partial<Record<MetricKey, string[] | null>>>({});
   const [metricOrder, setMetricOrder] = useState<MetricKey[]>(DEFAULT_METRICS);
   const [draggingMetricKey, setDraggingMetricKey] = useState<MetricKey | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
@@ -1482,10 +1606,12 @@ function FinalOverviewTrendChart() {
       ).filter((item) => selectedPeriods.includes(item.period) && selectedLineKinds.includes(item.lineKind)),
     [selectedBillingUnits, selectedLineKinds, selectedMetrics, selectedPeriods, selectedProducts, selectedRegions],
   );
-  const overviewLegendNames = useMemo(
-    () => Array.from(new Map(overviewChartData.map((item) => [getProductMetricGroupLabel(item), item.color])).keys()),
+  const overviewLegendItems = useMemo(
+    () => buildProductCustomLegendItems(overviewChartData, 'productMetricGroup'),
     [overviewChartData],
   );
+  const overviewLegendNames = useMemo(() => overviewLegendItems.map((item) => item.name), [overviewLegendItems]);
+  const selectedOverviewLegendValues = selectedOverviewLegendNames ?? overviewLegendNames;
   const splitChartData = useMemo(
     () =>
       buildFinalProductTrendData(
@@ -1511,6 +1637,7 @@ function FinalOverviewTrendChart() {
         colorFunctionalIcon1,
         selectedOverviewLegendNames,
         showSinglePeriodPoints,
+        true,
       ),
     [
       colorBorder2,
@@ -1527,8 +1654,12 @@ function FinalOverviewTrendChart() {
       orderedSelectedMetrics.map((metricKey) => {
         const metric = getMetricByKey(metricKey);
         const metricData = splitChartData.filter((item) => item.metric === metric.key);
+        const legendItems = buildProductCustomLegendItems(metricData, 'productDimension');
+        const selectedLegendNames = selectedSplitLegendNames[metric.key] ?? legendItems.map((item) => item.name);
         return {
           metric,
+          legendItems,
+          selectedLegendNames,
           spec: buildMetricChartSpec(
             metric,
             metricData,
@@ -1537,7 +1668,9 @@ function FinalOverviewTrendChart() {
             colorBorder2,
             colorFunctionalIcon1,
             showSinglePeriodPoints,
-            { scope: 'overview-final-split', metricKey: metric.key },
+            { scope: 'overview-final-split', metricKey: metric.key, alignSinglePointSide: showSinglePeriodPoints },
+            selectedLegendNames,
+            true,
           ),
         };
       }),
@@ -1547,6 +1680,7 @@ function FinalOverviewTrendChart() {
       colorText2,
       colorText3,
       orderedSelectedMetrics,
+      selectedSplitLegendNames,
       showSinglePeriodPoints,
       splitChartData,
     ],
@@ -1684,6 +1818,7 @@ function FinalOverviewTrendChart() {
 
   useEffect(() => {
     setSelectedOverviewLegendNames(null);
+    setSelectedSplitLegendNames({});
   }, [selectedBillingUnits, selectedLineKinds, selectedMetrics, selectedProducts, selectedRegions, timeWindow]);
 
   useEffect(() => {
@@ -1921,7 +2056,7 @@ function FinalOverviewTrendChart() {
 
       {viewMode === 'multiple' ? (
         <div className={styles.dualAxisFacetsGrid}>
-          {splitChartItems.map(({ metric, spec }) => {
+          {splitChartItems.map(({ metric, spec, legendItems, selectedLegendNames }) => {
             if (draggingMetricKey === metric.key) {
               return (
                 <div
@@ -1957,31 +2092,35 @@ function FinalOverviewTrendChart() {
                   <LineKindLegend />
                 </div>
 
-                <VChart
-                  spec={spec}
-                  className={styles.dualAxisFacetChart}
-                  style={{ height: 230 }}
-                  onReady={(chart) => {
-                    splitChartRefs.current[metric.key] = chart;
-                  }}
-                  onLegendItemHover={handleLegendItemHover}
-                  onLegendItemUnHover={hideLegendFocusTooltip}
-                  onDimensionHover={handleSplitDimensionHover}
-                  onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
-                  onLegendItemClick={(event) => {
-                    hideLegendFocusTooltip();
-                    if (isLegendFocusIconEvent(event)) {
-                      showOnlyLegendItem(chartRefOrNull(splitChartRefs.current[metric.key]), event, splitLegendNames);
+                <div className={styles.dualAxisChartStage}>
+                  <VChart
+                    spec={spec}
+                    className={styles.dualAxisFacetChart}
+                    style={{ height: '100%' }}
+                    onReady={(chart) => {
+                      splitChartRefs.current[metric.key] = chart;
+                    }}
+                    onDimensionHover={handleSplitDimensionHover}
+                    onDimensionClick={(event) => handleSplitDimensionClick(metric.key, event)}
+                    onPointerLeave={() => {
+                      hideLegendFocusTooltip();
+                      if (!lockedTooltipRef.current) {
+                        clearLockedTooltip();
+                      }
+                    }}
+                    onError={(error) => Message.error(`最终方案 ${metric.name} 趋势图加载失败：${error.message}`)}
+                  />
+                  <CustomPagedLegend
+                    items={legendItems}
+                    selectedNames={selectedLegendNames}
+                    onSelectedNamesChange={(nextSelectedNames) =>
+                      setSelectedSplitLegendNames((current) => ({
+                        ...current,
+                        [metric.key]: nextSelectedNames,
+                      }))
                     }
-                  }}
-                  onPointerLeave={() => {
-                    hideLegendFocusTooltip();
-                    if (!lockedTooltipRef.current) {
-                      clearLockedTooltip();
-                    }
-                  }}
-                  onError={(error) => Message.error(`最终方案 ${metric.name} 趋势图加载失败：${error.message}`)}
-                />
+                  />
+                </div>
               </Card>
             );
           })}
@@ -2005,12 +2144,22 @@ function FinalOverviewTrendChart() {
                 <LineKindLegend />
               </div>
 
-              <VChart
-                spec={dragPreviewItem.spec}
-                className={styles.dualAxisFacetChart}
-                style={{ height: 230 }}
-                onError={(error) => Message.error(`最终方案 ${dragPreviewItem.metric.name} 趋势图加载失败：${error.message}`)}
-              />
+              <div className={styles.dualAxisChartStage}>
+                <VChart
+                  spec={dragPreviewItem.spec}
+                  className={styles.dualAxisFacetChart}
+                  style={{ height: '100%' }}
+                  onError={(error) =>
+                    Message.error(`最终方案 ${dragPreviewItem.metric.name} 趋势图加载失败：${error.message}`)
+                  }
+                />
+                <CustomPagedLegend
+                  items={dragPreviewItem.legendItems}
+                  selectedNames={dragPreviewItem.selectedLegendNames}
+                  onSelectedNamesChange={() => undefined}
+                  showOnlyAction={false}
+                />
+              </div>
             </Card>
           )}
         </div>
@@ -2023,25 +2172,23 @@ function FinalOverviewTrendChart() {
             <LineKindLegend />
           </div>
 
-          <VChart
-            spec={overviewSpec}
-            className={styles.dualAxisChart}
-            style={{ height: 276 }}
-            onReady={(chart) => {
-              overviewChartRef.current = chart;
-            }}
-            onLegendItemHover={handleLegendItemHover}
-            onLegendItemUnHover={hideLegendFocusTooltip}
-            onLegendSelectedDataChange={handleOverviewLegendSelectedDataChange}
-            onLegendItemClick={(event) => {
-              hideLegendFocusTooltip();
-              if (isLegendFocusIconEvent(event)) {
-                showOnlyLegendItem(overviewChartRef.current, event, overviewLegendNames);
-              }
-            }}
-            onPointerLeave={hideLegendFocusTooltip}
-            onError={(error) => Message.error(`最终方案趋势图加载失败：${error.message}`)}
-          />
+          <div className={styles.dualAxisChartStage}>
+            <VChart
+              spec={overviewSpec}
+              className={styles.dualAxisChart}
+              style={{ height: '100%' }}
+              onReady={(chart) => {
+                overviewChartRef.current = chart;
+              }}
+              onPointerLeave={hideLegendFocusTooltip}
+              onError={(error) => Message.error(`最终方案趋势图加载失败：${error.message}`)}
+            />
+            <CustomPagedLegend
+              items={overviewLegendItems}
+              selectedNames={selectedOverviewLegendValues}
+              onSelectedNamesChange={setSelectedOverviewLegendNames}
+            />
+          </div>
         </Card>
       )}
 

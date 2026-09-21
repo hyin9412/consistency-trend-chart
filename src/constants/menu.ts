@@ -51,7 +51,7 @@ export const menuConfig: MenuGroup[] = [
       { key: MenuKey.DetailDemo, title: '详情页', route: '/detail-demo', hidden: true },
       { key: MenuKey.ConfigDemo, title: '配置页', route: '/config-demo', hidden: true },
       { key: MenuKey.ModalDrawer, title: '弹窗与抽屉', route: '/modal-drawer', hidden: true },
-      { key: MenuKey.VChartLineDemo, title: 'VChart 折线图', route: '/vchart-line-demo', hidden: true },
+      { key: MenuKey.VChartLineDemo, title: 'VChart 折线图', route: '/vchart-line-demo' },
       { key: MenuKey.VChartNewLineDemo, title: '新建折线图', route: '/vchart-new-line-demo', hidden: true },
       {
         key: MenuKey.CloudEChartLineDemo,

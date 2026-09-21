@@ -1,0 +1,134 @@
+.customLegend {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 12px 0 0;
+}
+
+.legendMeasureLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.legendRows {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 20px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #4e5969;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.legendMeasureItem {
+  flex: 0 0 auto;
+}
+
+.legendToggleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 3.6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.legendItemUnselected {
+  opacity: 0.42;
+}
+
+.legendOnlyButton {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-functional-icon-1, #6b7785);
+  font-size: 12px;
+  line-height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.legendItem:hover .legendOnlyButton,
+.legendItem:focus-within .legendOnlyButton {
+  opacity: 1;
+}
+
+.legendMarker {
+  width: 10px;
+  height: 10px;
+  border-radius: 1.71px;
+  flex: 0 0 auto;
+}
+
+.legendLabel {
+  white-space: nowrap;
+}
+
+.legendPager {
+  width: 32px;
+  flex: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #4e5969;
+}
+
+.legendPagerButton {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.legendPagerButton:disabled {
+  cursor: not-allowed;
+}
+
+.legendPagerText {
+  color: #1d2129;
+  font-size: 12px;
+  line-height: 20px;
+}
